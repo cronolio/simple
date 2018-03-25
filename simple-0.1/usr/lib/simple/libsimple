@@ -1,0 +1,442 @@
+### based on URL
+# get archive name from URL (Full Archive Name)
+# FAN=$(echo "$SRC_URL" | sed -r 's#.*\/(.*?)#\1#')
+
+# get prgram nage from archive name (Program Name)
+# PN=$(echo "$FAN" | sed -r 's/(\.tar|\.bz|\.bz2|\.xz|\.zip)//g')
+
+##################################################################
+################# --- functions --- ############################
+##### -- global -- ######
+regex1="([=<>]*)([-a-z]*)(/)([-_a-z0-9.]*)"
+regex2="([=<>]*)([-_a-z0-9.]+)"
+regex3="([-_a-z0-9]+)(-)([0-9.]+[a-z0-9.]*)"
+regex4="([-_a-z0-9]+)(-)([0-9.]+[a-z0-9.]*)(.buildme)"
+regexBDEP='(BDEPEND=")([^"]*?)(")'
+regexSRC_URL='(SRC_URL=")([^"]*?)(")'
+regexMD5_SUM='(MD5_SUM=")([^"]*?)(")'
+regexUSE='(USE=")([^"]*?)(")'
+check_use="([^ \f\n\r\t\v]+)(\?)"
+#for configure
+use_regex="--(enable|disable|with|without)-("$use")"
+#for make
+regex_makeflags='(MAKEFLAGS=")([^"]*?)(")'
+regex_cflags='(CFLAGS=")([^"]*?)(")'
+regex_cxxflags='(CXXFLAGS=")([^"]*?)(")'
+regex_ldflags='(LDFLAGS=")([^"]*?)(")'
+#for add/delete/print_variable
+regex_variable='([^ \f\n\r\t\v]+)(=["(])([^")]*?)([")])'
+array_regex="(.*)(\(\[0\]=)"
+
+###debug function
+# use "for all massage"
+debug_message() {
+if [ $DEBUG ]; then echo -e "$1"; fi
+}
+
+##############
+delete_variable(){
+for v in "$@"; do
+	while read line_var; do
+		if [[ $line_var =~ $regex ]]; then
+			name_var="${BASH_REMATCH[1]}"
+		fi
+
+		if [ "$v" != "$name_var" ]; then
+			new_variable+=($line_var)
+		fi
+	done < <(echo ${variable[@]} | sed 's!\([)"]\) !\1\n!g')
+done
+
+variable=(${new_variable[@]})
+unset line_var name_var new_variable
+}
+
+##############
+add_variable(){
+for v in "$@"; do
+	count=0
+	while read line_var; do
+		if [[ $line_var =~ $regex ]]; then
+			name_var="${BASH_REMATCH[1]}"
+			delim_var1="${BASH_REMATCH[2]}"
+			entry_var="${BASH_REMATCH[3]}"
+			delim_var2="${BASH_REMATCH[4]}"
+		fi
+
+		if [ "$v" = "$name_var" ]; then
+			if [[ $(declare -p "$v") =~ $array_regex ]]; then
+				tmp=${v}[@]
+				line_env=("$v=(${!tmp})")
+			else
+				line_env=("$v=\"${!v}\"")
+			fi
+
+			if [[ $line_env =~ $regex ]]; then
+				name_env="${BASH_REMATCH[1]}"
+				delim_env1="${BASH_REMATCH[2]}"
+				entry_env="${BASH_REMATCH[3]}"
+				delim_env2="${BASH_REMATCH[4]}"
+			fi
+
+			if [[ "$entry_env" != "$entry_var" || "$delim_env1" != "$delim_var1" || "$delim_env2" != "$delim_var2" ]]; then
+				delete_variable $v
+			else
+				count=$(($count + 1))	
+			fi
+		fi
+	
+	done < <(echo ${variable[@]} | sed 's!\([)"]\) !\1\n!g')
+
+	unset line_env tmp
+
+	if [ $count = 0 ]; then
+		if [[ $(declare -p "$v") =~ $array_regex ]]; then
+			tmp=${v}[@]
+			line_env=("$v=(${!tmp})")
+		else
+			line_env=("$v=\"${!v}\"")
+		fi
+		variable+=(${line_env[@]})
+	fi
+done
+
+unset v line_var name_var delim_var1 entry_var delim_var2 name_env delim_env1 entry_env delim_env2
+}
+
+##############
+print_variable(){
+echo ${variable[@]} | sed 's!\([)"]\) !\1\n!g'
+}
+
+##############
+get_variables(){
+
+parse_var=$1
+echo parse_var $parse_var
+
+#run_search
+echo "get_variables called from function ${FUNCNAME[1]}"
+
+if [[ ${FUNCNAME[1]} = search_in_categories || ${FUNCNAME[1]} = is_use_needed ]]; then
+	if [[ $parse_var =~ $regex1 ]]; then
+		ver_modif="${BASH_REMATCH[1]}"
+		category="${BASH_REMATCH[2]}"
+		separator="${BASH_REMATCH[3]}"
+		raw_package="${BASH_REMATCH[4]}"
+	else
+		if [[ $parse_var =~ $regex2 ]]; then
+			ver_modif="${BASH_REMATCH[1]}"
+			raw_package="${BASH_REMATCH[2]}"
+		fi
+	fi
+
+	if [[ $raw_package =~ $regex3 ]]; then
+		package="${BASH_REMATCH[1]}"
+		ver_sep="${BASH_REMATCH[2]}"
+	    version="${BASH_REMATCH[3]}"
+	else
+	    package="$raw_package"        
+	fi
+fi
+
+#get_dep
+if [[ ${FUNCNAME[1]} = get_dep ]]; then
+	if [[ $parse_var =~ $regex1 ]]; then
+		CATEGORY="${BASH_REMATCH[2]}" 
+		separator="${BASH_REMATCH[3]}"
+		raw_package="${BASH_REMATCH[4]}"
+	fi
+	if [[ $raw_package =~ $regex3 ]]; then
+		PACKAGE="${BASH_REMATCH[1]}"
+		ver_sep="${BASH_REMATCH[2]}"
+		VERSION="${BASH_REMATCH[3]}"
+	else
+		PACKAGE=$raw_package
+	fi
+fi
+
+#fetch all_build
+if [[ ${FUNCNAME[1]} = fetch_files || ${FUNCNAME[1]} = setup_env ]]; then
+	if [[ $parse_var =~ $regex1 ]]; then
+		CATEGORY="${BASH_REMATCH[2]}" 
+		separator="${BASH_REMATCH[3]}"
+		raw_package="${BASH_REMATCH[4]}"
+	fi
+	if [[ $raw_package =~ $regex3 ]]; then
+		PACKAGE="${BASH_REMATCH[1]}"
+		ver_sep="${BASH_REMATCH[2]}"
+		VERSION="${BASH_REMATCH[3]}"
+	else
+		PACKAGE=$raw_package
+	fi
+fi
+
+#debug_message "ver_modif:          $ver_modif
+#category:           $category
+#separator:          $separator
+#raw_package:        $raw_package
+#package:            $package
+#ver_sep:            $ver_sep
+#version:            $version"
+
+}
+
+#######################################
+get_expression(){
+if [[ ! -z "$ver_modif" || ! -z "$version" ]]; then
+	if [[ ! -z $ver_modif && ! -z $version ]]; then
+		if [ ${#ver_modif} -ge 4 ]; then
+			echo "ver_modif too long. current value $ver_modif"
+			exit 1				
+		fi
+
+		n=0
+		while [ $n -lt ${#ver_modif} ]; do
+			i=$(echo ${ver_modif:$n:1})
+			if [ "$i" = "=" ]; then 
+				same_version='='
+			fi
+			if [ "$i" = ">" ]; then
+				more_version='>'
+			fi
+			if [ "$i" = "<" ]; then
+				less_version='<'
+			fi
+			n=$((n + 1))
+		done
+		unset n i
+
+		if [[ ! -z "$more_version" && ! -z "$less_version" ]]; then
+			echo "'<' and '>' cannot be in same time"
+			exit 1
+		fi
+
+		if [[ ! -z "$more_version" || ! -z "$less_version" ]]; then
+			if [[ ! -z "$more_version" ]]; then
+				EXPR=$more_version
+			fi
+			if [[ ! -z "$less_version" ]]; then
+				EXPR=$less_version
+			fi
+			EXPR=$EXPR$same_version
+		else
+			EXPR=$same_version$same_version
+		fi
+
+#		debug_message "every things is ok"
+	else
+		echo "PIZDEC use =package-1.2.3 or =category/package-1.2.3"
+		exit 1
+	fi
+fi
+}
+
+#######################################################
+# works on dowload phase
+if_renamed_source() {
+cheks=$(echo "$SRC_URL" | tr -s [:space:] ' ' | cut -d ' ' -f2)
+#echo $cheks
+if [[ "$cheks" == "->" ]]
+    then
+        echo true
+    else
+        echo false
+fi
+unset cheks
+}
+
+#######################################################
+is_use_needed(){
+
+#checking make.conf
+if [[ $(cat "$ROOT_DIR/make.conf") =~ $regexUSE ]]; then
+	make_use_set=("${BASH_REMATCH[2]}")
+fi
+
+u=false
+if [ -n "${#make_use_set[@]}" ]; then
+	for i in "${make_use_set[@]}"; do
+		if [ "$i" = "$1" ]; then
+			u=true
+		fi
+		if [ "$i" = -"$1" ]; then
+			u=false
+		fi
+	done
+fi
+
+unset make_use_set i
+
+#checking package.use
+package_use_set=($(grep "$CATEGORY/$PACKAGE" "$ROOT_DIR/package.use"))
+if [ -n "${#package_use_set[@]}" ]; then
+	get_variables ${package_use_set[0]}
+	if [ -n "$version" ]; then
+		
+		#compare versions
+		get_expression
+
+		if [ ! -z "$ver_modif" ]; then
+			if (( $(echo "$VERSION $EXPR $version" | bc) )) ; then
+				for i in "${package_use_set[@]}"; do
+					if [ "$i" = "$1" ]; then
+						u=true
+					fi
+					if [ "$i" = -"$1" ]; then
+						u=false
+					fi
+				done
+			fi
+		fi
+
+	else
+		#all versions affected
+		for i in "${package_use_set[@]}"; do
+			if [ "$i" = "$1" ]; then
+				u=true
+			fi
+			if [ "$i" = -"$1" ]; then
+				u=false
+			fi
+		done
+	fi
+fi
+
+unset package_use_set i
+
+if [ $u = true ]; then
+	echo true
+else
+	echo false
+fi
+}
+
+################################################################
+xuse(){
+########
+# xuse #
+########
+# edww - enable, disable, with, without
+# 1 - our use flag name
+# 2 - use flag name in source (if it different)
+# 3 - arg like "yes" in "--enable-shared=yes"
+# $(xuse shared)
+
+use=$1
+arg=$3
+
+if [[ $conf_help =~ $use_regex ]]; then
+	edww="${BASH_REMATCH[1]}"
+else
+	exit 0
+fi
+
+if [[ $(is_use_needed $use) = true ]]; then
+	needed=true
+else
+	needed=false
+fi
+
+if [[ "$edww" = "enable" || "$edww" = "disable" ]]; then
+	if [[ "$needed" = "true" ]]; then
+		echo "--enable-$use"
+	else
+		echo "--disable-$use"
+	fi
+fi
+
+if [[ "$edww" = "with" || "$edww" = "without" ]]; then
+	if [[ "$needed" = "true" ]]; then
+		echo "--with-$use"
+	else
+		echo "--without-$use"
+	fi
+fi
+
+#	if [ -z $arg ]; then
+#		echo "--${BASH_REMATCH[1]}-${BASH_REMATCH[2]}"
+#	else
+#		echo "--${BASH_REMATCH[1]}-${BASH_REMATCH[2]}=$arg"
+#	fi
+
+unset edww needed use
+}
+
+##############################################################
+src_setup(){
+rm fifo_err 2>/dev/null
+mkfifo fifo_err
+
+if [ ! -f "$S/configure" ]; then
+	echo "configure file does not exist"
+	exit 1
+fi
+
+if [ ! -x "$S/configure" ]; then
+	echo "configure file does not executable"
+	exit 1
+fi
+
+if [ -z $conf_help ]; then
+	conf_help=$($S/configure --help=recursive)
+fi
+
+#echo "###########################"
+#$S/configure --help=recursive
+#echo "###########################"
+echo
+echo "configure $@"
+echo
+$S/configure "$@" 2>fifo_err &
+
+subshell_pid="$!"
+#echo "PID $subshell_pid"
+#sleep 55
+
+count=0
+while read line; do
+	if [ $count = 0 ]; then
+#		kill -15 $subshell_pid
+		count=$(($count + 1))
+	fi
+	echo -e "\e[01;31m$line\e[0m"
+done <fifo_err
+
+wait $subshell_pid 2>/dev/null
+}
+
+###################################
+src_compile(){
+if [ ! -f "Makefile" ]; then
+	echo "Makefile file does not exist"
+	exit 1
+fi
+
+#checking make.conf
+if [ -f "$ROOT_DIR/make.conf" ]; then
+	make_conf_file=$(cat "$ROOT_DIR/make.conf")
+
+	if [[ $make_conf_file =~ $regex_makeflags ]]; then
+		MAKEFLAGS=("${BASH_REMATCH[2]}")
+		export MAKEFLAGS
+	fi
+
+	if [[ $make_conf_file =~ $regex_cflags ]]; then
+		CFLAGS=("${BASH_REMATCH[2]}")
+		export CFLAGS
+	fi
+
+	if [[ $make_conf_file =~ $regex_cxxflags ]]; then
+		CXXFLAGS=("${BASH_REMATCH[2]}")
+		export CXXFLAGS
+	fi
+
+	if [[ $make_conf_file =~ $regex_ldflags ]]; then
+		LDFLAGS=("${BASH_REMATCH[2]}")
+		export LDFLAGS
+	fi
+fi
+
+make $MAKEFLAGS $@
+}
