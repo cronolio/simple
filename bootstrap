@@ -423,7 +423,7 @@ cd	 build
 
 ../libstdc++-v3/configure           \
     --prefix=/tools                 \
-	--includedir=/tools/include		\
+    --includedir=/tools/include     \
     --disable-multilib              \
     --disable-nls                   \
     --disable-libstdcxx-threads     \
@@ -449,9 +449,9 @@ echo "done"
 cd $PACKAGE_N
 
 ./configure --prefix=/tools	\
-	--enable-shared			\
+	--enable-shared		\
 	--with-internal-glib	\
-	--disable-static		\
+	--disable-static	\
 	--disable-host-tool
 
 make
@@ -472,23 +472,23 @@ cd $PACKAGE_N
 sed -i s/mawk// configure
 sed -i '/LIBTOOL_INSTALL/d' c++/Makefile.in
 
-./configure --prefix=/tools		\
-			--enable-colorfgbg	\
-			--enable-ext-mouse	\
-			--with-cxx-shared	\
-            --with-shared		\
-            --without-debug		\
-			--without-tests		\
-            --without-ada		\
-			--without-normal	\
-            --enable-widec		\
-			--enable-ext-colors \
-            --enable-overwrite	\
-			--enable-sigwinch	\
-			--enable-pc-files	\
-			--with-pkg-config=/tools/bin/pkg-config \
-			--with-pkg-config-libdir=/tools/lib/pkgconfig	\
-			--enable-pthreads-eintr
+./configure --prefix=/tools	\
+	--enable-colorfgbg	\
+	--enable-ext-mouse	\
+	--with-cxx-shared	\
+	--with-shared		\
+	--without-debug		\
+	--without-tests		\
+	--without-ada		\
+	--without-normal	\
+	--enable-widec		\
+	--enable-ext-colors	\
+	--enable-overwrite	\
+	--enable-sigwinch	\
+	--enable-pc-files	\
+	--with-pkg-config=/tools/bin/pkg-config \
+	--with-pkg-config-libdir=/tools/lib/pkgconfig	\
+	--enable-pthreads-eintr
 
 make
 make install
@@ -537,7 +537,7 @@ patch -Np1 -i ../bash-4.4-upstream_fixes-1.patch
 
 ./configure --prefix=/tools	\
 	--without-bash-malloc	\
-	--enable-readline		\
+	--enable-readline	\
 	--with-installed-readline
 
 make
@@ -863,10 +863,10 @@ PACKAGE=pcre-8.41 setvar
 tar -xf $PACKAGE_A
 cd $PACKAGE_N
 
-./configure --prefix=/tools			\
-	--enable-unicode-properties		\
-	--enable-pcre16					\
-	--enable-pcre32					\
+./configure --prefix=/tools		\
+	--enable-unicode-properties	\
+	--enable-pcre16			\
+	--enable-pcre32			\
 	--enable-pcretest-libreadline
 
 make
@@ -892,11 +892,11 @@ PACKAGE=nano-2.8.7.tar.xz setvar
 tar -xf $PACKAGE_A
 cd $PACKAGE_N
 
-./configure --prefix=/tools \
-	--sysconfdir=/tools/etc \
-	--disable-extra			\
-	--enable-color			\
-	--enable-utf8			\
+./configure --prefix=/tools	\
+	--sysconfdir=/tools/etc	\
+	--disable-extra		\
+	--enable-color		\
+	--enable-utf8		\
 
 make
 make install
@@ -942,9 +942,9 @@ tar -xf $PACKAGE_A
 cd $PACKAGE_N
 
 ./config --prefix=/tools		\
-	--openssldir=/tools/etc/ssl \
-	--libdir=lib				\
-	shared						\
+	--openssldir=/tools/etc/ssl 	\
+	--libdir=lib			\
+	shared				\
 	zlib-dynamic
 
 make
@@ -978,11 +978,11 @@ PACKAGE=wget-1.19.4.tar.gz setvar
 tar -xf $PACKAGE_A
 cd $PACKAGE_N
 
-./configure --prefix=/tools \
+./configure --prefix=/tools	\
 	--sysconfdir=/tools/etc \
-	--disable-debug			\
-	--with-openssl			\
-	--with-ssl=openssl		\
+	--disable-debug		\
+	--with-openssl		\
+	--with-ssl=openssl	\
 	--disable-ipv6
 
 make
@@ -1032,7 +1032,7 @@ tar -xf $PACKAGE_A
 cd $PACKAGE_N
 
 ./configure --prefix=/tools \
-			--disable-static
+	--disable-static
 
 make
 make install
