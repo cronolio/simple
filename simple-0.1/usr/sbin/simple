@@ -1,0 +1,119 @@
+#!/bin/bash
+
+run_search(){
+su simple -s /bin/bash /usr/lib/simple/search -- $@
+}
+
+run_fetch(){
+su simple -s /bin/bash /usr/lib/simple/fetch
+}
+
+run_all_build(){
+source /var/tmp/simple/VARIABLES
+for CPV in ${USERLIST_TO_INSTALL[@]}; do
+	BASH_ENV="$SIMPLEBUILD_DIR/.bashrc" su simple -s /bin/bash /usr/lib/simple/all_build $CPV
+done
+}
+
+#######################################################
+######-source-#######
+source /usr/lib/simple/libsimple
+######-path-#########
+if [ -d /tools ]; then
+    PATH=/bin:/usr/bin:/sbin:/usr/sbin:/tools/bin
+else
+    PATH=/bin:/usr/bin:/sbin:/usr/sbin
+fi
+
+#default dir variables
+ETC_DIR="/etc/simple"
+
+# where is placed buildme files
+BUILDME_DIR=$(grep BUILDME_DIR "$ETC_DIR/make.conf" | sed -nr 's/BUILDME_DIR="([\/~_a-z0-9 ]*)".*/\1/p')
+[[ -z $BUILDME_DIR ]] && BUILDME_DIR="/var/cache/simple/buildme"
+
+# where is placed downloaded files
+DISTDIR=$(grep BUILDME_DIR "$ETC_DIR/make.conf" | sed -nr 's/DISTDIR="([\/~_a-z0-9 ]*)".*/\1/p')
+[[ -z $DISTDIR ]] && DISTDIR="/var/cache/simple/distfiles"
+
+#place for upacked files to build (HOME for simple user) (like $SIMPLEBUILD_DIR/$CATEGORY/$PACKAGE)
+SIMPLEBUILD_DIR="/var/tmp/simple"
+
+rm $SIMPLEBUILD_DIR/VARIABLES
+
+##### body ######
+#zapuskator
+if [ $# -gt 0 ]; then
+	regex_option="(^-).*?"
+	for i in "$@"; do
+		if [[ "$i" =~ $regex_option ]]; then
+			if [[ "$i" != "--" ]]; then
+				good=false
+				if [[ "$i" = "-p" || "$i" = "--pretendent" ]]; then
+					good=true
+					PRETENDENT=true
+					add_variable PRETENDENT
+					option="$i $option"
+				fi
+				if [[ "$i" = "-d" || "$i" = "--debug" ]]; then
+					good=true
+					DEBUG=true
+					add_variable DEBUG
+					option="$i $option"
+				fi
+
+				#bad options
+				if [[ "$good" = false ]]; then
+					if [[ "$i" =~ $regex_option ]]; then
+						echo "unknown option $i"
+						bad_option="$i $bad_option"
+					fi
+				fi
+			else
+				break
+			fi
+		fi
+	done
+
+#removing bad options
+	for k in "$@"; do
+		count_bad=0
+		for b in $bad_option; do
+			if [[ "$k" = "$b" ]]; then
+				count_bad=$((count_bad + 1))
+			fi
+		done
+		if [[ $count_bad = 0 ]]; then
+			known="$k $known"
+		fi
+	done
+
+	for k in $known; do
+		count_arg=0
+		for l in $option; do
+			if [[ "$k" = "$l" ]]; then
+				count_arg=$((count_arg + 1))
+			fi
+		done
+
+		if [[ $count_arg = 0 ]]; then
+			arg="$k $arg"
+		fi
+	done
+
+	echo "all arg $arg"
+
+unset a b i k l bad_option good count_arg count_bad known option regex_option
+
+add_variable PATH ETC_DIR BUILDME_DIR DISTDIR SIMPLEBUILD_DIR ETC_DIR
+print_variable > $SIMPLEBUILD_DIR/VARIABLES
+chown simple:simple $SIMPLEBUILD_DIR/VARIABLES
+
+	run_search $arg
+	run_fetch
+	run_all_build
+
+else
+	echo show help here
+    exit 0
+fi
