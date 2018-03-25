@@ -1,0 +1,40 @@
+#!/bin/bash
+
+#cleanup_env(){
+#clean up environment
+#REQENV="REQENV HOME USER TERM LS_COLORS PS1 PATH"
+#
+#for C in $(printenv | cut -d '=' -f 1); do
+#   echo $C
+#    echo $REQENV | grep $C > /dev/null 2>&1 || unset $C > /dev/null 2>&1
+#done
+
+#( set -o posix ; set )
+#}
+
+setup_env(){
+CPV=$1
+cd $HOME
+source /usr/lib/simple/libsimple
+source /var/tmp/simple/VARIABLES
+get_variables $CPV
+
+BROOT="$SIMPLEBUILD_DIR/$CATEGORY/$PACKAGE-$VERSION"
+S="$BROOT/srcdir"
+B="$BROOT/builddir/$PACKAGE-$VERSION"
+
+
+export CATEGORY PACKAGE VERSION BROOT S B
+}
+
+all_build(){
+/usr/lib/simple/unpack $1
+#/usr/lib/simple/patch $1
+/usr/lib/simple/setup
+/usr/lib/simple/compile
+}
+
+
+#cleanup_env
+setup_env $1
+all_build $1
