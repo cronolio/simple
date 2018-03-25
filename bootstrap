@@ -1068,8 +1068,8 @@ make install
 
 cd $source_dir
 rm -rf $PACKAGE_N
-#############################################################################################
-###### stripping # stripping can fail with wrong files, we will disable 'set -e' for a while
+######################################################################################
+###### stripping # stripping can fail with wrong files, we will disable 'set -e'
 set +e
 echo stripping
 rm -rf /tools/cross
@@ -1121,7 +1121,7 @@ chmod -v u+x $LFS/sources/$me
 sed -i 's/#!\/bin\/bash/#!\/tools\/bin\/bash/g' $LFS/sources/$me
 
 /tools/bin/env -i	\
-HOME=/root			\
+HOME=/root		\
 TERM="$TERM"		\
 PS1='\u:\w\$ '		\
 PATH=/bin:/usr/bin:/sbin:/usr/sbin:/tools/bin \
@@ -1224,7 +1224,7 @@ while [ $# -gt 0 ]; do
 case $1 in
          -c)  continue_from_user    ;;
          -r)  from_root             ;;
-		 -i)  continue_from_chroot	;;
+	 -i)  continue_from_chroot  ;;
   from-user)  from_user             ;;
 from-chroot)  from_chroot           ;;
 esac
