@@ -1,48 +1,98 @@
 #!/bin/bash
 
-run_search(){
-su simple -s /bin/bash /usr/lib/simple/search -- $@
-}
-
-run_fetch(){
-su simple -s /bin/bash /usr/lib/simple/fetch
-}
-
-run_all_build(){
-source /var/tmp/simple/VARIABLES
-for CPV in ${USERLIST_TO_INSTALL[@]}; do
-	BASH_ENV="$SIMPLEBUILD_DIR/.bashrc" su simple -s /bin/bash /usr/lib/simple/all_build $CPV
-done
-}
-
-#######################################################
-######-source-#######
-source /usr/lib/simple/libsimple
+sourcing(){
 ######-path-#########
 if [ -d /tools ]; then
-    PATH=/bin:/usr/bin:/sbin:/usr/sbin:/tools/bin
+    PATH=/bin:/usr/bin:/sbin:/usr/sbin:/tools/bin:/tools/sbin
 else
     PATH=/bin:/usr/bin:/sbin:/usr/sbin
 fi
-
 #default dir variables
 ETC_DIR="/etc/simple"
 
+######-source-#######
+get_var_file "$ETC_DIR/make.conf"
+
 # where is placed buildme files
-BUILDME_DIR=$(grep BUILDME_DIR "$ETC_DIR/make.conf" | sed -nr 's/BUILDME_DIR="([\/~_a-z0-9 ]*)".*/\1/p')
-[[ -z $BUILDME_DIR ]] && BUILDME_DIR="/var/cache/simple/buildme"
-
+if [[ -z "$BUILDME_DIR" ]]; then
+    BUILDME_DIR="/var/cache/simple/buildme"
+fi
 # where is placed downloaded files
-DISTDIR=$(grep BUILDME_DIR "$ETC_DIR/make.conf" | sed -nr 's/DISTDIR="([\/~_a-z0-9 ]*)".*/\1/p')
-[[ -z $DISTDIR ]] && DISTDIR="/var/cache/simple/distfiles"
-
-#place for upacked files to build (HOME for simple user) (like $SIMPLEBUILD_DIR/$CATEGORY/$PACKAGE)
+if [[ -z "$DISTDIR" ]]; then
+    DISTDIR="/var/cache/simple/distfiles"
+fi
+# place for upacked files to build (HOME for simple user) (like ${SIMPLEBUILD_DIR}/${CATEGORY}/${PACKAGE} )
 SIMPLEBUILD_DIR="/var/tmp/simple"
+# be sure bashrc deleted from previous run
+if [ -f $SIMPLEBUILD_DIR/bashrc ]; then
+    rm -f $SIMPLEBUILD_DIR/bashrc
+fi
+add_variable PATH ETC_DIR BUILDME_DIR DISTDIR SIMPLEBUILD_DIR
+add_variable CFLAGS CXXFLAGS CPPFLAGS LDFLAGS MAKEFLAGS STABILITY LINGUAS USE
 
-rm $SIMPLEBUILD_DIR/VARIABLES
+print_variable > $SIMPLEBUILD_DIR/bashrc
+chown simple:simple $SIMPLEBUILD_DIR/bashrc
+}
+
+run_search(){
+BASH_ENV="$SIMPLEBUILD_DIR/bashrc" su simple -s /bin/bash /usr/lib/simple/search -- $@
+}
+
+run_fetch(){
+BASH_ENV="$SIMPLEBUILD_DIR/bashrc" su simple -s /bin/bash /usr/lib/simple/fetch
+}
+
+run_all_build(){
+source $SIMPLEBUILD_DIR/bashrc
+for CPV in ${USERLIST_TO_INSTALL[@]}; do
+    BASH_ENV="$SIMPLEBUILD_DIR/bashrc" su simple -s /bin/bash /usr/lib/simple/all_build -- $CPV -setup_env
+
+    # Checking if previous source is present and delete
+    # DANGEROUS operation. Check if prefix of path is /var/tmp/simple to allow this
+    broot=$(grep BROOT $SIMPLEBUILD_DIR/bashrc | sed -nr 's/BROOT="([^"]*?)(")/\1/p')
+
+    if [ -d "$broot" ]; then
+        path_regex="("$SIMPLEBUILD_DIR")(/)([-a-z]+)(/)([-_a-z0-9.]+)"
+
+        if [[ "$broot" =~ $(echo "$path_regex") ]]; then
+            if [ "${BASH_REMATCH[1]}" != "$SIMPLEBUILD_DIR" ]; then
+                echo "Checking for safe prefix in '$BROOT' failed. Should be $SIMPLEBUILD_DIR"
+                exit 1
+            fi
+
+            echo -e "\e[96mDelete previous Source\e[0m"
+            rm -rf "$broot"
+	    
+	    category="${BASH_REMATCH[3]}"
+
+            if [ "$(ls -A "$SIMPLEBUILD_DIR/$category")" ]; then
+                echo -e "\e[96mCategory dir is not empty. Keep it\e[0m"
+            else
+                echo -e "\e[96mRemoving empty category directory $SIMPLEBUILD_DIR/$category\e[0m"
+                rmdir "$SIMPLEBUILD_DIR/$category"
+            fi
+
+        else
+            echo 'path_regex for $BROOT failed'
+            exit 1
+        fi
+    fi
+    # remove line from bashrc with BROOT
+    sed -i '/BROOT/d' "$SIMPLEBUILD_DIR/bashrc"
+
+    unset broot path_regex category
+
+    BASH_ENV="$SIMPLEBUILD_DIR/bashrc" su simple -s /bin/bash /usr/lib/simple/all_build -- $CPV -all_build
+
+    /usr/lib/simple/install $CPV
+done
+}
+
 
 ##### body ######
 #zapuskator
+source /usr/lib/simple/libsimple
+
 if [ $# -gt 0 ]; then
 	regex_option="(^-).*?"
 	for i in "$@"; do
@@ -105,15 +155,11 @@ if [ $# -gt 0 ]; then
 
 unset a b i k l bad_option good count_arg count_bad known option regex_option
 
-add_variable PATH ETC_DIR BUILDME_DIR DISTDIR SIMPLEBUILD_DIR ETC_DIR
-print_variable > $SIMPLEBUILD_DIR/VARIABLES
-chown simple:simple $SIMPLEBUILD_DIR/VARIABLES
-
+	sourcing
 	run_search $arg
 	run_fetch
 	run_all_build
-
 else
 	echo show help here
-    exit 0
+	exit 0
 fi
