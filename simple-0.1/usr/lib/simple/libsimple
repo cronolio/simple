@@ -34,7 +34,133 @@ debug_message() {
 if [ $DEBUG ]; then echo -e "$1"; fi
 }
 
-##############
+################################################
+get_var_file() {
+if [ "$#" = "1" ]; then
+	file_path="$1"
+	if [ ! -f "$file_path" ]; then
+		echo "$file_path not a regular file"
+		exit 1
+	fi
+	if [ ! -r "$file_path" ]; then
+		echo "$file_path not readable"
+		exit 1
+	fi
+else
+	echo "use only one file as argument"
+	exit 1
+fi
+
+regex_var_content='([a-zA-Z_][a-zA-Z_0-9]*)(=")([^"]*?)(")([^ \t]*?)'
+in_2quotes=false
+in_1quotes=false
+multiline=false
+
+# detecting if we in quotes and add nextline to thisline if so
+while IFS= read -r new_LINE; do
+	if [ "$multiline" = "true" ]; then
+		LINE="$old_LINE$new_LINE"
+		in_2quotes=false
+		in_1quotes=false
+		unset content
+	else
+		LINE="$new_LINE"
+		unset prev_symbol content
+	fi
+
+	while read -rN 1 symbol; do
+		if [[ "$prev_symbol" = '\' && "$symbol" = "'" && "$in_1quotes" = "false" && "$in_2quotes" = "false" ]]; then
+			prev_symbol="$symbol"
+			continue
+		fi
+		if [[ "$prev_symbol" = '\' && "$symbol" = '"' ]]; then
+			prev_symbol="$symbol"
+			continue
+		fi
+		if [[ "$in_2quotes" = "true" && "$symbol" = "'" ]]; then
+			prev_symbol="$symbol"
+			continue
+		fi
+		if [[ "$in_1quotes" = "true" && "$symbol" = '"' ]]; then
+			prev_symbol="$symbol"
+			continue
+		fi
+		
+		# default actions
+		if [ "$symbol" = '"' ]; then
+			if [ "$in_2quotes" = "false" ]; then
+				in_2quotes=true
+			else
+				in_2quotes=false
+			fi
+		fi
+		if [ "$symbol" = "'" ]; then
+			if [ "$in_1quotes" = "false" ]; then
+				in_1quotes=true
+			else
+				in_1quotes=false
+			fi
+		fi
+		if [[ "$symbol" = $'\n' ]]; then
+			if [[ "$in_1quotes" = "true" || "$in_2quotes" = "true" ]]; then
+				multiline=true
+			else
+				multiline=false
+			fi
+		fi
+		
+		# no comments in output
+		if [[ "$symbol" = '#' && "$in_2quotes" = "false" && "$in_1quotes" = "false" ]]; then
+			break
+		fi
+
+		prev_symbol="$symbol"
+		content+="$symbol"
+		
+	done <<< "$LINE"
+
+	if [ "$multiline" = "false" ]; then
+		commentless_content+="$content"
+		unset old_LINE
+	else
+		old_LINE="$LINE"
+	fi
+
+done <"$file_path"
+
+# expand variables (only ${bar} syntax supported) and sourcing
+while read -r LINE; do
+# trim extra whitespaces from the line
+	shopt -s extglob # enable extended pattern matching
+	LINE="${LINE//+([[:space:]])/ }"
+	LINE="${LINE#"${LINE%%[![:space:]]*}"}"
+	LINE="${LINE%"${LINE##*[![:space:]]}"}"
+	shopt -u extglob
+	
+	if [[ "$LINE" =~ \$([a-zA-Z_][a-zA-Z_0-9]*)(.*) ]]; then
+		echo 'declaration like "$bar" does not supported. use "${bar}" instead'
+		exit 1
+	fi
+
+	while [[ "$LINE" =~ \$(\{([a-zA-Z_][a-zA-Z_0-9]*)\})(.*) ]]; do
+		if [[ -z ${!BASH_REMATCH[2]} ]]; then
+			echo "$""${BASH_REMATCH[1]} is not definded"
+			exit 1
+		fi
+		NEW_LINE+="${LINE%"$BASH_REMATCH"}${!BASH_REMATCH[2]}"
+		LINE=${BASH_REMATCH[3]}
+	done
+
+	if [[ "$NEW_LINE$LINE" =~ $regex_var_content ]]; then
+		eval ${BASH_REMATCH[1]}='${BASH_REMATCH[3]}${BASH_REMATCH[5]}'
+	fi
+
+	unset LINE NEW_LINE
+done <<< "$commentless_content"
+unset in_2quotes in_1quotes multiline LINE old_LINE new_LINE NEW_LINE prev_symbol symbol regex_var_content file_path commentless_content content
+}
+
+######################
 delete_variable(){
 for v in "$@"; do
 	while read line_var; do
@@ -157,7 +283,7 @@ if [[ ${FUNCNAME[1]} = get_dep ]]; then
 fi
 
 #fetch all_build
-if [[ ${FUNCNAME[1]} = fetch_files || ${FUNCNAME[1]} = setup_env ]]; then
+if [[ ${FUNCNAME[1]} = fetch_files || ${FUNCNAME[1]} = setup_env || ${FUNCNAME[1]} = all_build ]]; then
 	if [[ $parse_var =~ $regex1 ]]; then
 		CATEGORY="${BASH_REMATCH[2]}" 
 		separator="${BASH_REMATCH[3]}"
@@ -364,7 +490,7 @@ unset edww needed use
 }
 
 ##############################################################
-src_setup(){
+src_conf(){
 rm fifo_err 2>/dev/null
 mkfifo fifo_err
 
@@ -404,39 +530,27 @@ while read line; do
 done <fifo_err
 
 wait $subshell_pid 2>/dev/null
+unset count
 }
 
 ###################################
-src_compile(){
+src_make(){
 if [ ! -f "Makefile" ]; then
 	echo "Makefile file does not exist"
 	exit 1
 fi
 
-#checking make.conf
-if [ -f "$ROOT_DIR/make.conf" ]; then
-	make_conf_file=$(cat "$ROOT_DIR/make.conf")
-
-	if [[ $make_conf_file =~ $regex_makeflags ]]; then
-		MAKEFLAGS=("${BASH_REMATCH[2]}")
-		export MAKEFLAGS
-	fi
-
-	if [[ $make_conf_file =~ $regex_cflags ]]; then
-		CFLAGS=("${BASH_REMATCH[2]}")
-		export CFLAGS
-	fi
-
-	if [[ $make_conf_file =~ $regex_cxxflags ]]; then
-		CXXFLAGS=("${BASH_REMATCH[2]}")
-		export CXXFLAGS
-	fi
-
-	if [[ $make_conf_file =~ $regex_ldflags ]]; then
-		LDFLAGS=("${BASH_REMATCH[2]}")
-		export LDFLAGS
-	fi
-fi
-
 make $MAKEFLAGS $@
 }
+
+###################################
+install_dist(){
+if [ ! -f "Makefile" ]; then
+	echo "Makefile file does not exist"
+	exit 1
+fi
+
+BROOT=$BROOT sandbox printenv
+#$MAKEFLAGS DESTDIR=${D} $@
+}
+####################################
