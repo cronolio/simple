@@ -533,11 +533,10 @@ tar -xf $PACKAGE_A
 echo "done"
 cd $PACKAGE_N
 
-patch -Np1 -i ../bash-4.4-upstream_fixes-1.patch
+patch -Np0 -i ../bash44-019
 
 ./configure --prefix=/tools	\
 	--without-bash-malloc	\
-	--enable-readline	\
 	--with-installed-readline
 
 make
