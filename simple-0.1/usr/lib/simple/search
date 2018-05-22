@@ -143,13 +143,17 @@ for I in $sortedbystability; do
 	max=0
 
 	if [[ "$I" =~ $regex4 ]]; then
-		if (( $(echo ${BASH_REMATCH[3]}'>'$max | bc) ))
-			then
-				max=${BASH_REMATCH[3]}
+		if [ "${BASH_REMATCH[3]}" > "$max" ]; then
+			max="${BASH_REMATCH[3]}"
 		fi
 	fi
 	debug_message "max: $max"
 done
+
+if [ "$max" = 0 ]; then
+	echo "no mached version found"
+	return 1
+fi
 
 CATEGORY=$category
 PACKAGE=$package
