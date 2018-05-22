@@ -1,0 +1,36 @@
+#!/bin/bash
+
+install_files(){
+if ! type simple_install > /dev/null 2>&1
+	then echo -e "\e[96msimple_install() is not definded in buildme file. Runing default\e[0m"
+
+	BROOT=$BROOT sandbox make DESTDIR=${D} install
+else
+	echo -e "\e[96mRun simple_install() from buildme file\e[0m"
+	simple_install
+fi
+
+}
+
+setup_env(){
+CPV=$1
+cd $HOME
+source /usr/lib/simple/libsimple
+source /var/tmp/simple/bashrc
+get_variables $CPV
+
+BROOT="$SIMPLEBUILD_DIR/$CATEGORY/$PACKAGE-$VERSION"
+S="$BROOT/srcdir"
+B="$BROOT/builddir/$PACKAGE-$VERSION"
+D="$BROOT/installed"
+
+export CATEGORY PACKAGE VERSION BROOT S B D
+
+
+cd "$B"
+source "$BROOT/varlog/variables"
+source "$BUILDME_FILE"
+}
+
+setup_env $1
+install_files
