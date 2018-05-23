@@ -6,6 +6,7 @@ https://ftp.gnu.org/gnu/gcc/gcc-7.2.0/gcc-7.2.0.tar.xz
 https://www.kernel.org/pub/linux/kernel/v4.x/linux-4.12.7.tar.xz
 https://ftp.gnu.org/gnu/glibc/glibc-2.26.tar.xz
 http://www.linuxfromscratch.org/patches/lfs/8.1/glibc-2.26-fhs-1.patch
+https://data.iana.org/time-zones/releases/tzdata2018e.tar.gz
 https://ftp.gnu.org/gnu/binutils/binutils-2.29.tar.bz2
 https://pkg-config.freedesktop.org/releases/pkg-config-0.29.2.tar.gz
 https://ftp.gnu.org/gnu//ncurses/ncurses-6.0.tar.gz
