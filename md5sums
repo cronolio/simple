@@ -5,6 +5,7 @@ f58fa8001d60c4c77595fbbb62b63c1d  gmp-6.1.2.tar.xz
 ff370482573133a7fcdd96cd2f552292  gcc-7.2.0.tar.xz
 245d1b4dc6e82669aac2c9e6a2dd82fe  linux-4.12.7.tar.xz
 102f637c3812f81111f48f2427611be1  glibc-2.26.tar.xz
+97d654f4d7253173b3eeb76a836dd65e  tzdata2018e.tar.gz
 23733a26c8276edbb1168c9bee60e40e  binutils-2.29.tar.bz2
 f6e931e319531b736fadc017f470e68a  pkg-config-0.29.2.tar.gz
 ee13d052e1ead260d7c28071f46eefb1  ncurses-6.0.tar.gz
