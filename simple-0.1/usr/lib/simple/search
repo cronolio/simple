@@ -143,7 +143,7 @@ for I in $sortedbystability; do
 	max=0
 
 	if [[ "$I" =~ $regex4 ]]; then
-		if [ "${BASH_REMATCH[3]}" > "$max" ]; then
+		if [[ "${BASH_REMATCH[3]}" > "$max" ]]; then
 			max="${BASH_REMATCH[3]}"
 		fi
 	fi
