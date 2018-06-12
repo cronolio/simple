@@ -1,0 +1,78 @@
+#!/bin/bash
+
+run_merge(){
+
+echo -e "\e[96mRunning merge\e[0m"
+cd "$D" || return 1
+if [ ! -d /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION" ]; then
+	mkdir -p /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION" || return 1
+else
+	echo "/var/lib/$CATEGORY/$PACKAGE-$VERSION already exist"
+	return 1
+fi
+
+shopt -s globstar
+for line in ** ; do
+	if [ "$line" = "." ]; then
+		continue
+	elif [ -d "$line" ]; then
+		echo "dir /$line"
+		continue
+	elif [ -L "$line" ]; then
+		echo "sym /$line -> $(readlink $line)"
+		continue
+	fi
+
+	#http://sco.com/developers/gabi/latest/ch4.eheader.html
+	# not sure about  \0\0..
+	read -rN 17 byte <"$line"
+	if [[ "$byte" =~ $'\x7f'(ELF)($'\x01'|$'\x02')($'\x01'|$'\x02')($'\x01'|$'\x02')$'\x00'$'\x00'($'\x01'|$'\x02'|$'\x03') ]]; $
+		if [[ "${BASH_REMATCH[5]}" = $'\x02' || "${BASH_REMATCH[5]}" = $'\x03' ]]; then
+			if [ "${BASH_REMATCH[2]}" = $'\x02' ]; then
+				abi="64"
+			elif [ "${BASH_REMATCH[2]}" = $'\x01' ]; then
+				abi="32"
+			fi
+
+			while read -r ldd_line; do
+				ldd_lib=$(echo "$ldd_line" | cut -d ' ' -f1)
+				if [ "$ldd_lib" != linux-vdso.so.1 ]; then
+					ldd_result+=($ldd_lib)
+				fi
+			done < <(ldd "$line")
+
+			echo "elf_$abi /$line $(md5sum $line | cut -d ' ' -f1) ${ldd_result[@]}"
+			unset ldd_result byte abi
+			continue
+		fi
+	fi
+	echo "otr /$line $(md5sum $line | cut -d ' ' -f1)"
+done > /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"/CONTENT
+shopt -u globstar
+
+
+#cp -r --preserve=all * /
+}
+
+setup_env(){
+CPV=$1
+source /usr/lib/simple/libsimple
+source /var/tmp/simple/bashrc
+cd $SIMPLEBUILD_DIR
+get_variables $CPV
+
+BROOT="$SIMPLEBUILD_DIR/$CATEGORY/$PACKAGE-$VERSION"
+S="$BROOT/srcdir"
+B="$BROOT/builddir/$PACKAGE-$VERSION"
+D="$BROOT/installed"
+
+export CATEGORY PACKAGE VERSION BROOT S B D
+
+
+cd "$B"
+source "$BROOT/varlog/variables"
+source "$BUILDME_FILE"
+}
+
+setup_env $1
+run_merge
