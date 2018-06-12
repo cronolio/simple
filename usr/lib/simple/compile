@@ -1,0 +1,21 @@
+#!/bin/bash
+
+compile_source(){
+if ! type simple_compile > /dev/null 2>&1
+	then echo -e "\e[96msimple_compile() is not definded in buildme file. Runing default\e[0m"
+
+	echo zzzzzzzzzzzzzzzzz
+	return 1
+else
+	echo -e "\e[96mRun simple_compile() from buildme file\e[0m"
+	simple_compile
+fi
+
+}
+
+cd "$B"
+source /usr/lib/simple/libsimple
+source "$BROOT/varlog/variables"
+source /var/tmp/simple/bashrc
+source "$BUILDME_FILE"
+compile_source
