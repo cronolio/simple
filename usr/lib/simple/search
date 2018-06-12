@@ -1,0 +1,296 @@
+#!/bin/bash
+########
+##start search in categories
+#calculate package path
+#CP category/package
+#echo "arguments $@"
+
+search_in_categories() {
+# if / in an agument, then category "known" (required to check if category really available)
+# in this case we use search directly with this category
+# if no / , then search package via each category
+# if = is used, then we prefer this version at the end of search (if stability allow it)
+#
+# media-libs/libpng
+# =media-libs/libpng-1.6.32
+# =libpng-1.6.32
+# some-category/p1_oauth2-0.63
+# category/go-sys
+# some-category/go-sys-20160729
+# differen-category/localshell-0.1_rev2sec3
+# rev2 - revision of buildme
+# sev3 - security update
+
+cd $HOME
+source /usr/lib/simple/libsimple
+
+for arg in "$@"; do
+
+debug_message "argument to search is: $arg"
+
+get_variables $arg
+get_expression
+
+#ebany poisk
+if [ ! -z "$category" ]; then
+	debug_message "category known"
+	CATEGORY=$(grep "$category" "$BUILDME_DIR"/profiles/categories)
+	if [[ "$CATEGORY" = "$category" ]]; then
+		[ ! -d "$BUILDME_DIR/$category/$package" ] && echo "$BUILDME_DIR/$category/$package not a directory" && exit 1
+		pushd "$BUILDME_DIR/$category/$package" > /dev/null 2>&1 || exit 1
+		filenames=$(find * -maxdepth 1 -type f -name "*.buildme")
+		popd > /dev/null 2>&1 || exit 1
+
+		if [ -z "$filenames" ]; then
+			echo "Category is definded but no one file in directory '$BUILDME_DIR/$category/$package' is not found"
+			exit 1
+		fi
+
+		debug_message "list after search:"
+		debug_message "$filenames"
+	else
+		echo "Category $category does not exist"
+		exit 1
+	fi
+
+else
+	debug_message "category not known"
+
+	count=0
+	for entry in $(cat "$BUILDME_DIR"/profiles/categories); do
+	CP=$(
+	     pushd "$BUILDME_DIR" > /dev/null 2>&1 || exit 1
+	     find $entry -mindepth 1 -maxdepth 1 -type d -name "$package" 2> /dev/null
+	     popd > /dev/null 2>&1 || exit 1
+	    )
+
+		if [ ! -z "$CP" ]; then
+			found+=$"$CP " && count=$((count + 1)) && category="$entry"
+
+			if [ "$count" -gt "1" ]; then
+				echo -n 'Sorry, we found many packages. Try to use '
+				echo "$found"
+				exit 1
+			fi
+		fi
+
+		CP=$(echo -e $found) #eat whitespace
+	done
+
+	if [ -z "$CP" ]; then
+		echo "Category for $raw_package is not found"
+		exit 1
+	fi
+
+	category="$category"
+	debug_message "CP: $CP"
+	debug_message "category: $category"
+
+	pushd "$BUILDME_DIR/$CP" > /dev/null 2>&1 || exit 1
+	filenames=$(find * -maxdepth 1 -type f -name "*.buildme")
+	popd > /dev/null 2>&1 || exit 1
+
+	if [ -z "$filenames" ]; then
+		echo "Category is definded but no one file in directory $BUILDME_DIR/$CP is not found
+		exit 1
+	fi
+
+	debug_message "list after search:"
+	debug_message "$filenames"
+fi
+
+#if required only specific version
+if [ ! -z "$ver_modif" ]; then
+	for F in $filenames; do
+		debug_message "F: $F"
+		if [[ "$F" =~ $regex4 ]]; then
+			debug_message "version from filenames: ${BASH_REMATCH[3]}"
+			debug_message "expr: $EXPR"
+			if (( $(echo "${BASH_REMATCH[3]} $EXPR $version" | bc) ))
+				then sortedbyversion+="$F "
+			fi
+		fi
+	done
+	unset EXPR
+else
+	sortedbyversion="$filenames"
+fi
+
+[[ -z "$sortedbyversion" ]] && echo "no version found" && exit 1
+debug_message "sortedbyversion: $sortedbyversion"
+
+#checking stability
+for F in $sortedbyversion; do
+	debug_message "F: $F"
+	var_stability=$(grep STABILITY "$BUILDME_DIR/$category/$package/$F" | sed -nr 's/STABILITY="([~_a-zA-Z0-9${} ]*)".*/\1/p')
+	make_stability=$STABILITY
+
+	debug_message "var stability: $var_stability"
+	debug_message "make stability: $make_stability"
+
+	for S in $var_stability; do
+		if [ "$S" = "$make_stability" ]; then
+			sortedbystability+=$"$F "
+		fi
+	done
+done
+
+debug_message "sortedbystability: $sortedbystability"
+
+#checking for more new package
+for I in $sortedbystability; do
+	debug_message "I: $I"
+	max=0
+
+	if [[ "$I" =~ $regex4 ]]; then
+		if [[ "${BASH_REMATCH[3]}" > "$max" ]]; then
+			max="${BASH_REMATCH[3]}"
+		fi
+	fi
+	debug_message "max: $max"
+done
+
+if [ "$max" = 0 ]; then
+	echo "no mached version found"
+	return 1
+fi
+
+CATEGORY=$category
+PACKAGE=$package
+VERSION=$max
+
+if [ "$look_for_dep" = "yes" ]; then
+	DEP="$CATEGORY/$PACKAGE-$VERSION"
+#	add_variable DEP
+else
+	if [ -z $USERLIST_TO_INSTALL ]; then
+		USERLIST_TO_INSTALL="$CATEGORY/$PACKAGE-$VERSION"
+	else
+		NEWLIST=(${USERLIST_TO_INSTALL[@]} "$CATEGORY/$PACKAGE-$VERSION")
+		USERLIST_TO_INSTALL=(${NEWLIST[@]})
+	fi
+#	echo ===================================
+#	echo "list to install from search: ${USERLIST_TO_INSTALL[@]}"
+fi
+
+unset CATEGORY PACKAGE VERSION
+unset same_version less_version more_version
+unset CP category package raw_package separator ver_modif ver_sep version
+unset count found max F I S filenames var_stability make_stability sortedbystability sortedbyversion
+
+#show all variables
+# ( set -o posix ; set )
+
+done
+########
+#add_array USERLIST_TO_INSTALL
+#print_variable >> $SIMPLEBUILD_DIR/VARIABLES
+}
+
+################################################################################
+
+get_dep(){
+unset look
+if [[ $look_for_dep = yes ]]; then
+	look=$DEP
+else
+	look=${USERLIST_TO_INSTALL[@]}
+fi
+
+for CPV in $look; do
+	debug_message "CPV $CPV"
+	get_variables $CPV
+
+	if [[ $(cat "$BUILDME_DIR/$CATEGORY/$PACKAGE/$PACKAGE-$VERSION.buildme") =~ $regexBDEP ]]; then
+		bdep_line=$(echo "${BASH_REMATCH[2]}" | tr -s [:space:] ' ')
+		debug_message "bdep_line ${bdep_line[@]}"
+		if [[ "$bdep_line" = ' ' ]]; then
+			debug_message "bdep_line is definded but empty"
+		else
+			count=0
+			for b in ${bdep_line[@]}; do
+				if [[ $b =~ $check_use ]]; then
+					debug_message "USE: ${BASH_REMATCH[1]}"
+
+					count=$((count + 1))
+					if [[ $(is_use_needed "${BASH_REMATCH[1]}") = true ]]; then
+						debug_message "use needed"
+						needed=true
+					else
+						debug_message "use NOT needed"
+						needed=false
+					fi
+				else
+					if [[ $count -gt 0 ]]; then
+						if [[ $b != "(" && $b != ")" && $needed = true ]]; then
+							bdep="$bdep $b"
+						fi
+					fi
+				fi
+				if [[ $b = ")" ]]; then
+					count=$((count - 1))
+				fi
+				if [[ $count = 0 ]]; then
+					if [[ $b != "(" && $b != ")" ]]; then
+						bdep="$bdep $b"
+					fi
+				fi
+			done
+		fi
+	else
+		debug_message "BDEPEND is not definded"
+	fi
+
+BDEP=("$bdep")
+unset needed count b bdep bdep_line category package raw_package ver_modif ver_sep version
+
+#################################################
+
+	for dep in ${BDEP[@]}; do
+		look_for_dep=yes
+		search_in_categories "$dep"
+
+		count=0
+		for pack in ${USERLIST_TO_INSTALL[@]}; do
+			if [[ "$pack" != "$DEP" ]]; then
+				count=$((count + 1))
+			fi
+		done
+
+		if [[ "$count" = "${#USERLIST_TO_INSTALL[*]}" ]]; then
+			debug_message "new dependency $DEP"
+
+			USERLIST_TO_INSTALL=("$DEP" "${USERLIST_TO_INSTALL[@]}")
+			debug_message "list after adding ${USERLIST_TO_INSTALL[@]}"
+
+			get_dep
+
+		else
+			debug_message "$DEP should be before $CPV"
+
+			USERLIST_TO_INSTALL=($(echo ${USERLIST_TO_INSTALL[@]} | sed -r "s,$DEP,,g"))
+			USERLIST_TO_INSTALL=($DEP ${USERLIST_TO_INSTALL[@]})
+			debug_message "list after moving ${USERLIST_TO_INSTALL[@]}"
+
+			get_dep
+		fi
+
+	done
+
+	look_for_dep=no
+	unset DEP CATEGORY PACKAGE VERSION BDEP pack count category package raw_package ver_modif ver_sep version
+
+done
+
+}
+################################################################################
+search_in_categories $@
+get_dep
+
+add_variable USERLIST_TO_INSTALL
+
+print_variable >> "$SIMPLEBUILD_DIR/bashrc"
+
+
+#echo "list to install (inside search) ${USERLIST_TO_INSTALL[@]}"
+
