@@ -1,0 +1,178 @@
+#!/bin/bash
+
+sourcing(){
+######-path-#########
+if [ -d /tools ]; then
+	PATH=/bin:/usr/bin:/sbin:/usr/sbin:/tools/bin:/tools/sbin
+else
+	PATH=/bin:/usr/bin:/sbin:/usr/sbin
+fi
+
+#default dir variables
+ETC_DIR="/etc/simple"
+
+######-source-#######
+get_var_file "$ETC_DIR/make.conf"
+
+# where is placed buildme files
+if [[ -z "$BUILDME_DIR" ]]; then
+	BUILDME_DIR="/var/cache/simple/buildme"
+fi
+
+# where is placed downloaded files
+if [[ -z "$DISTDIR" ]]; then
+	DISTDIR="/var/cache/simple/distfiles"
+fi
+
+# place for upacked files to build (HOME for simple user) (like ${SIMPLEBUILD_DIR}/${CATEGORY}/${PACKAGE} )
+SIMPLEBUILD_DIR="/var/tmp/simple"
+
+# be sure bashrc deleted from previous run
+if [ -f $SIMPLEBUILD_DIR/bashrc ]; then
+	rm -f $SIMPLEBUILD_DIR/bashrc
+fi
+
+add_variable PATH ETC_DIR BUILDME_DIR DISTDIR SIMPLEBUILD_DIR
+add_variable CFLAGS CXXFLAGS CPPFLAGS LDFLAGS MAKEFLAGS STABILITY LINGUAS USE
+
+print_variable > $SIMPLEBUILD_DIR/bashrc
+chown simple:simple $SIMPLEBUILD_DIR/bashrc
+}
+
+run_search(){
+BASH_ENV="$SIMPLEBUILD_DIR/bashrc" su simple -s /bin/bash /usr/lib/simple/search -- $@
+}
+
+run_show_pretendent(){
+BASH_ENV="$SIMPLEBUILD_DIR/bashrc" su simple -s /bin/bash /usr/lib/simple/pretendent
+}
+
+run_fetch(){
+BASH_ENV="$SIMPLEBUILD_DIR/bashrc" su simple -s /bin/bash /usr/lib/simple/fetch
+}
+
+run_all_build(){
+source $SIMPLEBUILD_DIR/bashrc
+for CPV in ${USERLIST_TO_INSTALL[@]}; do
+	BASH_ENV="$SIMPLEBUILD_DIR/bashrc" su simple -s /bin/bash /usr/lib/simple/all_build -- $CPV -setup_env
+
+	# Checking if previous source is present and delete	
+	# DANGEROUS operation. Check if prefix of path is /var/tmp/simple to allow this
+	broot=$(grep BROOT $SIMPLEBUILD_DIR/bashrc | sed -nr 's/BROOT="([^"]*?)(")/\1/p')
+
+	if [ -d "$broot" ]; then
+		path_regex="("$SIMPLEBUILD_DIR")(/)([-a-z]+)(/)([-_a-z0-9.]+)"
+
+		if [[ "$broot" =~ $(echo "$path_regex") ]]; then
+			if [ "${BASH_REMATCH[1]}" != "$SIMPLEBUILD_DIR" ]; then
+				echo "Checking for safe prefix in '$BROOT' failed. Should be $SIMPLEBUILD_DIR"
+				exit 1
+			fi
+
+			echo -e "\e[96mDelete previous Source\e[0m"
+			rm -rf "$broot"
+			
+			category="${BASH_REMATCH[3]}"
+
+			if [ "$(ls -A "$SIMPLEBUILD_DIR/$category")" ]; then
+				echo -e "\e[96mCategory dir is not empty. Keep it\e[0m"
+			else
+				echo -e "\e[96mRemoving empty category directory $SIMPLEBUILD_DIR/$category\e[0m"
+				rmdir "$SIMPLEBUILD_DIR/$category"
+			fi
+		else
+			echo 'path_regex for $BROOT failed'
+			exit 1
+		fi
+	fi
+
+	# remove line from bashrc with BROOT
+	sed -i '/BROOT/d' "$SIMPLEBUILD_DIR/bashrc"
+
+	unset broot path_regex category
+
+	BASH_ENV="$SIMPLEBUILD_DIR/bashrc" su simple -s /bin/bash /usr/lib/simple/all_build -- $CPV -all_build
+
+	/usr/lib/simple/install $CPV
+done
+}
+
+
+##### body ######
+#zapuskator
+source /usr/lib/simple/libsimple
+
+if [ $# -gt 0 ]; then
+	regex_option="(^-).*?"
+	for i in "$@"; do
+		if [[ "$i" =~ $regex_option ]]; then
+			if [[ "$i" != "--" ]]; then
+				good=false
+				if [[ "$i" = "-p" || "$i" = "--pretendent" ]]; then
+					good=true
+					PRETENDENT=true
+					add_variable PRETENDENT
+					option="$i $option"
+				fi
+				if [[ "$i" = "-d" || "$i" = "--debug" ]]; then
+					good=true
+					DEBUG=true
+					add_variable DEBUG
+					option="$i $option"
+				fi
+
+				#bad options
+				if [[ "$good" = false ]]; then
+					if [[ "$i" =~ $regex_option ]]; then
+						echo "unknown option $i"
+						bad_option="$i $bad_option"
+					fi
+				fi
+			else
+				break
+			fi
+		fi
+	done
+
+#removing bad options
+	for k in "$@"; do
+		count_bad=0
+		for b in $bad_option; do
+			if [[ "$k" = "$b" ]]; then
+				count_bad=$((count_bad + 1))
+			fi
+		done
+		if [[ $count_bad = 0 ]]; then
+			known="$k $known"
+		fi
+	done
+
+	for k in $known; do
+		count_arg=0
+		for l in $option; do
+			if [[ "$k" = "$l" ]]; then
+				count_arg=$((count_arg + 1))
+			fi
+		done
+
+		if [[ $count_arg = 0 ]]; then
+			arg="$k $arg"
+		fi
+	done
+
+	echo "all arg $arg"
+
+unset a b i k l bad_option good count_arg count_bad known option regex_option
+
+	sourcing || exit 1
+	run_search $arg || exit 1
+	if [ -n $PRETENDENT ]; then
+		run_show_pretendent || exit 1
+		exit 0
+	fi
+	run_fetch || exit 1
+	run_all_build || exit 1
+else
+	echo show help here
+	exit 0
+fi
