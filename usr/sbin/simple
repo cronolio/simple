@@ -94,6 +94,7 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 	BASH_ENV="$SIMPLEBUILD_DIR/bashrc" su simple -s /bin/bash /usr/lib/simple/all_build -- $CPV -all_build
 
 	/usr/lib/simple/install $CPV
+	/usr/lib/simple/merge $CPV
 done
 }
 
