@@ -21,7 +21,7 @@ search_in_categories() {
 # rev2 - revision of buildme
 # sev3 - security update
 
-cd $HOME
+cd $SIMPLEBUILD_DIR
 source /usr/lib/simple/libsimple
 
 for arg in "$@"; do
@@ -36,21 +36,21 @@ if [ ! -z "$category" ]; then
 	debug_message "category known"
 	CATEGORY=$(grep "$category" "$BUILDME_DIR"/profiles/categories)
 	if [[ "$CATEGORY" = "$category" ]]; then
-		[ ! -d "$BUILDME_DIR/$category/$package" ] && echo "$BUILDME_DIR/$category/$package not a directory" && exit 1
-		pushd "$BUILDME_DIR/$category/$package" > /dev/null 2>&1 || exit 1
+		[ ! -d "$BUILDME_DIR/$category/$package" ] && echo "$BUILDME_DIR/$category/$package not a directory" && return 1
+		pushd "$BUILDME_DIR/$category/$package" > /dev/null 2>&1 || return 1
 		filenames=$(find * -maxdepth 1 -type f -name "*.buildme")
-		popd > /dev/null 2>&1 || exit 1
+		popd > /dev/null 2>&1 || return 1
 
 		if [ -z "$filenames" ]; then
 			echo "Category is definded but no one file in directory '$BUILDME_DIR/$category/$package' is not found"
-			exit 1
+			return 1
 		fi
 
 		debug_message "list after search:"
 		debug_message "$filenames"
 	else
 		echo "Category $category does not exist"
-		exit 1
+		return 1
 	fi
 
 else
@@ -59,9 +59,9 @@ else
 	count=0
 	for entry in $(cat "$BUILDME_DIR"/profiles/categories); do
 	CP=$(
-	     pushd "$BUILDME_DIR" > /dev/null 2>&1 || exit 1
+	     pushd "$BUILDME_DIR" > /dev/null 2>&1 || return 1
 	     find $entry -mindepth 1 -maxdepth 1 -type d -name "$package" 2> /dev/null
-	     popd > /dev/null 2>&1 || exit 1
+	     popd > /dev/null 2>&1 || return 1
 	    )
 
 		if [ ! -z "$CP" ]; then
@@ -70,7 +70,7 @@ else
 			if [ "$count" -gt "1" ]; then
 				echo -n 'Sorry, we found many packages. Try to use '
 				echo "$found"
-				exit 1
+				return 1
 			fi
 		fi
 
@@ -79,20 +79,20 @@ else
 
 	if [ -z "$CP" ]; then
 		echo "Category for $raw_package is not found"
-		exit 1
+		return 1
 	fi
 
 	category="$category"
 	debug_message "CP: $CP"
 	debug_message "category: $category"
 
-	pushd "$BUILDME_DIR/$CP" > /dev/null 2>&1 || exit 1
+	pushd "$BUILDME_DIR/$CP" > /dev/null 2>&1 || return 1
 	filenames=$(find * -maxdepth 1 -type f -name "*.buildme")
-	popd > /dev/null 2>&1 || exit 1
+	popd > /dev/null 2>&1 || return 1
 
 	if [ -z "$filenames" ]; then
-		echo "Category is definded but no one file in directory $BUILDME_DIR/$CP is not found
-		exit 1
+		echo "Category is definded but no one file in directory $BUILDME_DIR/$CP is not found"
+		return 1
 	fi
 
 	debug_message "list after search:"
@@ -116,7 +116,7 @@ else
 	sortedbyversion="$filenames"
 fi
 
-[[ -z "$sortedbyversion" ]] && echo "no version found" && exit 1
+[[ -z "$sortedbyversion" ]] && echo "no version found" && return 1
 debug_message "sortedbyversion: $sortedbyversion"
 
 #checking stability
@@ -284,13 +284,17 @@ done
 
 }
 ################################################################################
-search_in_categories $@
-get_dep
+search_in_categories $@ || exit 1
+
+if [ "$REMOVE" = "true" ]; then
+	add_variable USERLIST_TO_INSTALL
+	print_variable >> "$SIMPLEBUILD_DIR/bashrc"
+	exit 0
+fi
+
+get_dep || exit 1
 
 add_variable USERLIST_TO_INSTALL
 
 print_variable >> "$SIMPLEBUILD_DIR/bashrc"
-
-
-#echo "list to install (inside search) ${USERLIST_TO_INSTALL[@]}"
 
