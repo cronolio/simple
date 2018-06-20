@@ -47,6 +47,10 @@ run_show_pretendent(){
 BASH_ENV="$SIMPLEBUILD_DIR/bashrc" su simple -s /bin/bash /usr/lib/simple/pretendent
 }
 
+run_remove(){
+/usr/lib/simple/remove
+}
+
 run_fetch(){
 BASH_ENV="$SIMPLEBUILD_DIR/bashrc" su simple -s /bin/bash /usr/lib/simple/fetch
 }
@@ -121,6 +125,12 @@ if [ $# -gt 0 ]; then
 					add_variable DEBUG
 					option="$i $option"
 				fi
+				if [[ "$i" = "-r" || "$i" = "--remove" ]]; then
+					good=true
+					REMOVE=true
+					add_variable REMOVE
+					option="$i $option"
+				fi
 
 				#bad options
 				if [[ "$good" = false ]]; then
@@ -167,10 +177,16 @@ unset a b i k l bad_option good count_arg count_bad known option regex_option
 
 	sourcing || exit 1
 	run_search $arg || exit 1
+	
 	if [ -n $PRETENDENT ]; then
 		run_show_pretendent || exit 1
 		exit 0
 	fi
+	if [ -v REMOVE ]; then
+		run_remove || exit 1
+		exit 0
+	fi
+	
 	run_fetch || exit 1
 	run_all_build || exit 1
 else
