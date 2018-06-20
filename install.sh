@@ -42,11 +42,11 @@ install -vd  /etc/simple
 install -v -m644  etc/simple/make.conf /etc/simple
 
 install -vd  /var/cache/simple
-cp      -vr  var/cache/simple/* /var/cache/simple
-chown   -vR simple:simple  /var/cache/simple
+install -vd  /var/lib/pkg
 
 install -vd  /usr/lib/simple
-install -vD -m744 -o simple -g simple  usr/lib/simple/* /usr/lib/simple
+install -vD -m754 -o simple -g simple  usr/lib/simple/* /usr/lib/simple
 chmod 644  /usr/lib/simple/libsimple
+chown root:root /usr/lib/simple/{install,merge,remove}
 
-install -v -m750  usr/sbin/simple /usr/sbin
+install -v -m754  usr/sbin/simple /usr/sbin
