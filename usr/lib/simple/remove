@@ -1,0 +1,66 @@
+#!/bin/bash
+
+remove_files(){
+if [ -f /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"/CONTENT ]; then
+	content_regex=$'(dir|otr|elf32|elf64) ([^ \f\n\r\t\v]+).*'
+	while read -r line; do
+		if [[ "$line" =~ $content_regex ]]; then
+			if [ "${BASH_REMATCH[1]}" = "dir" ]; then
+				package_dirs="${BASH_REMATCH[2]} $package_dirs"
+			else
+				#echo "path of no-dir is ${BASH_REMATCH[2]}"
+				rm -f -- "${BASH_REMATCH[2]}"
+			fi
+		else
+			content regex failed
+			return 1
+		fi
+	done </var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"/CONTENT
+
+	fhs_dirs=$(cat /usr/lib/simple/fhs_dirs)
+
+	for package_dir in $package_dirs; do
+		#echo package_dir $package_dir
+
+		if (shopt -s nullglob dotglob; f=("$package_dir"/*); ((! ${#f[@]}))); then
+			matched_fhs=false
+			for fhs_dir in $fhs_dirs; do
+				if [ "$fhs_dir" = "$package_dir" ]; then
+					#echo "matched for fhs"
+					matched_fhs=true
+				fi
+			done
+
+			if [ "$matched_fhs" = false ]; then
+				#echo "no any match for fhs"
+				rmdir -- "$package_dir" 2> /dev/null
+			fi
+		fi
+	done
+
+	rm -rf -- /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"
+	rmdir --  /var/lib/pkg/"$CATEGORY" 2> /dev/null
+
+
+else
+	echo "CONTENT file for $CPV is not exist"
+	return 1
+fi
+
+}
+
+setup_env(){
+source /usr/lib/simple/libsimple
+source /var/tmp/simple/bashrc
+cd $SIMPLEBUILD_DIR
+
+for CPV in ${USERLIST_TO_INSTALL[@]}; do
+    get_variables $CPV
+	remove_files
+
+done
+}
+
+
+setup_env
+
