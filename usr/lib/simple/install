@@ -9,14 +9,24 @@ else
 	echo -e "\e[96mRun simple_install() from buildme file\e[0m"
 	simple_install
 fi
+}
 
+strip_files(){
+cd "$D" || return 1
+echo -n -e "\e[96mStripping libraries  \e[0m"
+strip --strip-debug {,usr/}lib{,64,32,x32}/* 2>/dev/null
+echo "Ok"
+
+echo -n -e "\e[96mStripping binaries  \e[0m"
+strip --strip-unneeded {,usr/}{,s}bin/* 2>/dev/null
+echo "Ok"
 }
 
 setup_env(){
 CPV=$1
-cd $HOME
 source /usr/lib/simple/libsimple
 source /var/tmp/simple/bashrc
+cd $SIMPLEBUILD_DIR
 get_variables $CPV
 
 BROOT="$SIMPLEBUILD_DIR/$CATEGORY/$PACKAGE-$VERSION"
@@ -34,3 +44,4 @@ source "$BUILDME_FILE"
 
 setup_env $1
 install_files
+strip_files
