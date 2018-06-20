@@ -51,7 +51,7 @@ done > /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"/CONTENT
 shopt -u globstar
 
 
-#cp -r --preserve=all * /
+cp -r --preserve=all * /
 }
 
 setup_env(){
