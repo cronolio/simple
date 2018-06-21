@@ -1,6 +1,8 @@
 #!/bin/bash
 
 remove_files(){
+echo -n -e "\e[96mRemoving $CATEGORY/$PACKAGE-$VERSION  \e[0m"
+
 if [ -f /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"/CONTENT ]; then
 	content_regex=$'(dir|otr|elf32|elf64) ([^ \f\n\r\t\v]+).*'
 	while read -r line; do
@@ -41,6 +43,7 @@ if [ -f /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"/CONTENT ]; then
 	rm -rf -- /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"
 	rmdir --  /var/lib/pkg/"$CATEGORY" 2> /dev/null
 
+	echo "Ok"
 
 else
 	echo "CONTENT file for $CPV is not exist"
