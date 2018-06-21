@@ -2,7 +2,7 @@
 
 run_merge(){
 
-echo -e "\e[96mRunning merge\e[0m"
+echo -e "\e[96mRunning merge  \e[0m"
 cd "$D" || return 1
 if [ ! -d /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION" ]; then
 	mkdir -p /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION" || return 1
@@ -51,11 +51,13 @@ done > /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"/CONTENT
 shopt -u globstar
 
 # copy all files to real system
-cp -r --preserve=all * /
+cp -r --preserve=all * / || return 1
 
 # remove work direcory and category if empty
 rm -rf -- /var/tmp/simple/"$CATEGORY"/"$PACKAGE"-"$VERSION"
 rmdir -- /var/tmp/simple/"$CATEGORY" 2> /dev/null
+
+echo "Ok"
 }
 
 setup_env(){
