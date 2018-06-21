@@ -50,8 +50,12 @@ for line in ** ; do
 done > /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"/CONTENT
 shopt -u globstar
 
-
+# copy all files to real system
 cp -r --preserve=all * /
+
+# remove work direcory and category if empty
+rm -rf -- /var/tmp/simple/"$CATEGORY"/"$PACKAGE"-"$VERSION"
+rmdir -- /var/tmp/simple/"$CATEGORY" 2> /dev/null
 }
 
 setup_env(){
