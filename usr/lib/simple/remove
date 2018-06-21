@@ -55,9 +55,8 @@ source /var/tmp/simple/bashrc
 cd $SIMPLEBUILD_DIR
 
 for CPV in ${USERLIST_TO_INSTALL[@]}; do
-    get_variables $CPV
+	get_variables $CPV
 	remove_files
-
 done
 }
 
