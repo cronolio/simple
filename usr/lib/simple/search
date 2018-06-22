@@ -32,7 +32,7 @@ get_variables $arg
 get_expression
 
 #ebany poisk
-if [ ! -z "$category" ]; then
+if [ v category ]; then
 	debug_message "category known"
 	CATEGORY=$(grep "$category" "$BUILDME_DIR"/profiles/categories)
 	if [[ "$CATEGORY" = "$category" ]]; then
@@ -106,8 +106,8 @@ if [ ! -z "$ver_modif" ]; then
 		if [[ "$F" =~ $regex4 ]]; then
 			debug_message "version from filenames: ${BASH_REMATCH[3]}"
 			debug_message "expr: $EXPR"
-			if (( $(echo "${BASH_REMATCH[3]} $EXPR $version" | bc) ))
-				then sortedbyversion+="$F "
+			if [ "${BASH_REMATCH[3]}" "$EXPR" "$version" ]; then
+				sortedbyversion+="$F "
 			fi
 		fi
 	done
