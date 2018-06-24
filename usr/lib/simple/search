@@ -22,7 +22,9 @@ search_in_categories() {
 # sev3 - security update
 
 cd $SIMPLEBUILD_DIR
+source $SIMPLEBUILD_DIR/bashrc
 source /usr/lib/simple/libsimple
+
 
 for arg in "$@"; do
 
@@ -32,17 +34,28 @@ get_variables $arg
 get_expression
 
 #ebany poisk
-if [ v category ]; then
+if [ -v category ]; then
 	debug_message "category known"
 	CATEGORY=$(grep "$category" "$BUILDME_DIR"/profiles/categories)
 	if [[ "$CATEGORY" = "$category" ]]; then
-		[ ! -d "$BUILDME_DIR/$category/$package" ] && echo "$BUILDME_DIR/$category/$package not a directory" && return 1
-		pushd "$BUILDME_DIR/$category/$package" > /dev/null 2>&1 || return 1
-		filenames=$(find * -maxdepth 1 -type f -name "*.buildme")
-		popd > /dev/null 2>&1 || return 1
+		if [ "$REMOVE" = "true" ]; then
+			[ ! -d "/var/lib/pkg/$category" ] && echo "/var/lib/pkg/$category not a directory" && return 1
+			pushd "/var/lib/pkg/$category" > /dev/null 2>&1 || return 1
+			filenames=$(find * -maxdepth 1 -type d -name "$package*")
+			popd > /dev/null 2>&1 || return 1
+		else
+			[ ! -d "$BUILDME_DIR/$category/$package" ] && echo "$BUILDME_DIR/$category/$package not a directory" && return 1
+			pushd "$BUILDME_DIR/$category/$package" > /dev/null 2>&1 || return 1
+			filenames=$(find * -maxdepth 1 -type f -name "*.buildme")
+			popd > /dev/null 2>&1 || return 1
+		fi
 
 		if [ -z "$filenames" ]; then
-			echo "Category is definded but no one file in directory '$BUILDME_DIR/$category/$package' is not found"
+			if [ "$REMOVE" = "true" ]; then
+				echo "Category is definded but no matched directory in /var/lib/pkg/$category is not found"
+			else
+				echo "Category is definded but no any file in $BUILDME_DIR/$category/$package is not found"
+			fi
 			return 1
 		fi
 
@@ -55,44 +68,68 @@ if [ v category ]; then
 
 else
 	debug_message "category not known"
-
 	count=0
-	for entry in $(cat "$BUILDME_DIR"/profiles/categories); do
-	CP=$(
-	     pushd "$BUILDME_DIR" > /dev/null 2>&1 || return 1
-	     find $entry -mindepth 1 -maxdepth 1 -type d -name "$package" 2> /dev/null
-	     popd > /dev/null 2>&1 || return 1
-	    )
-
-		if [ ! -z "$CP" ]; then
-			found+=$"$CP " && count=$((count + 1)) && category="$entry"
-
-			if [ "$count" -gt "1" ]; then
-				echo -n 'Sorry, we found many packages. Try to use '
-				echo "$found"
-				return 1
+	if [ "$REMOVE" = "true" ]; then
+		for entry in $(cat "$BUILDME_DIR"/profiles/categories); do
+			CPV=$(
+				pushd "/var/lib/pkg" > /dev/null 2>&1 || return 1
+				find $entry -mindepth 1 -maxdepth 1 -type d -name "$package*" 2> /dev/null
+				popd > /dev/null 2>&1 || return 1
+				)
+			if [ ! -z "$CPV" ]; then
+				found+="$CPV " && count=$((count + 1))
 			fi
+		done
+
+		found=$(echo -e $found) #eat whitespace
+
+		if [ -z "$found" ]; then
+			echo "Category for $raw_package is not found"
+			return 1
 		fi
 
-		CP=$(echo -e $found) #eat whitespace
-	done
+		filenames="$found"
 
-	if [ -z "$CP" ]; then
-		echo "Category for $raw_package is not found"
-		return 1
-	fi
+	else
+		for entry in $(cat "$BUILDME_DIR"/profiles/categories); do
+    			CP=$(
+			pushd "$BUILDME_DIR" > /dev/null 2>&1 || return 1
+			find $entry -mindepth 1 -maxdepth 1 -type d -name "$package" 2> /dev/null
+			popd > /dev/null 2>&1 || return 1
+			)
 
-	category="$category"
-	debug_message "CP: $CP"
-	debug_message "category: $category"
+			if [ -n "$CP" ]; then
+				found+="$CP " && count=$((count + 1))
+			fi
+		done
 
-	pushd "$BUILDME_DIR/$CP" > /dev/null 2>&1 || return 1
-	filenames=$(find * -maxdepth 1 -type f -name "*.buildme")
-	popd > /dev/null 2>&1 || return 1
+		found=$(echo -e $found) #eat whitespace
 
-	if [ -z "$filenames" ]; then
-		echo "Category is definded but no one file in directory $BUILDME_DIR/$CP is not found"
-		return 1
+		if [ "$count" -gt "1" ]; then
+			echo -n 'Sorry, we found many packages. Try to use '
+			echo "$found"
+			return 1
+		fi
+
+		if [ -z "$found" ]; then
+			echo "Category for $raw_package is not found"
+			return 1
+		fi
+
+		get_variables "$found"
+
+		debug_message "category: $category"
+		debug_message "package: $package"
+
+		pushd "$BUILDME_DIR/$category/$package" > /dev/null 2>&1 || return 1
+		filenames=$(find * -maxdepth 1 -type f -name "*.buildme")
+		popd > /dev/null 2>&1 || return 1
+
+		if [ -z "$filenames" ]; then
+			echo "Category is definded but no one file in directory $BUILDME_DIR/$CP is not found"
+			return 1
+		fi
+
 	fi
 
 	debug_message "list after search:"
@@ -103,11 +140,24 @@ fi
 if [ ! -z "$ver_modif" ]; then
 	for F in $filenames; do
 		debug_message "F: $F"
-		if [[ "$F" =~ $regex4 ]]; then
-			debug_message "version from filenames: ${BASH_REMATCH[3]}"
-			debug_message "expr: $EXPR"
-			if [ "${BASH_REMATCH[3]}" "$EXPR" "$version" ]; then
-				sortedbyversion+="$F "
+		if [ "$REMOVE" = "true" ]; then
+			# only regexp is different. rewrite it to be shortly
+			if [[ "$F" =~ $regex3 ]]; then
+				debug_message "version from filenames: ${BASH_REMATCH[3]}"
+				debug_message "expr: $EXPR"
+
+				if [ "${BASH_REMATCH[3]}" "$EXPR" "$version" ]; then
+					sortedbyversion+="$F "
+				fi
+			fi
+		else
+			if [[ "$F" =~ $regex4 ]]; then
+				debug_message "version from filenames: ${BASH_REMATCH[3]}"
+				debug_message "expr: $EXPR"
+
+				if [ "${BASH_REMATCH[3]}" "$EXPR" "$version" ]; then
+					sortedbyversion+="$F "
+				fi
 			fi
 		fi
 	done
@@ -117,60 +167,70 @@ else
 fi
 
 [[ -z "$sortedbyversion" ]] && echo "no version found" && return 1
-debug_message "sortedbyversion: $sortedbyversion"
+debug_message "sorted by version: $sortedbyversion"
 
 #checking stability
-for F in $sortedbyversion; do
-	debug_message "F: $F"
-	var_stability=$(grep STABILITY "$BUILDME_DIR/$category/$package/$F" | sed -nr 's/STABILITY="([~_a-zA-Z0-9${} ]*)".*/\1/p')
-	make_stability=$STABILITY
-
-	debug_message "var stability: $var_stability"
-	debug_message "make stability: $make_stability"
-
-	for S in $var_stability; do
-		if [ "$S" = "$make_stability" ]; then
-			sortedbystability+=$"$F "
-		fi
-	done
-done
-
-debug_message "sortedbystability: $sortedbystability"
-
-#checking for more new package
-for I in $sortedbystability; do
-	debug_message "I: $I"
-	max=0
-
-	if [[ "$I" =~ $regex4 ]]; then
-		if [[ "${BASH_REMATCH[3]}" > "$max" ]]; then
-			max="${BASH_REMATCH[3]}"
-		fi
-	fi
-	debug_message "max: $max"
-done
-
-if [ "$max" = 0 ]; then
-	echo "no mached version found"
-	return 1
-fi
-
-CATEGORY=$category
-PACKAGE=$package
-VERSION=$max
-
-if [ "$look_for_dep" = "yes" ]; then
-	DEP="$CATEGORY/$PACKAGE-$VERSION"
-#	add_variable DEP
+# don't care about stability if REMOVE
+if [ "$REMOVE" = "true" ]; then
+	REMOVE_LIST="$sortedbyversion"
 else
-	if [ -z $USERLIST_TO_INSTALL ]; then
-		USERLIST_TO_INSTALL="$CATEGORY/$PACKAGE-$VERSION"
-	else
-		NEWLIST=(${USERLIST_TO_INSTALL[@]} "$CATEGORY/$PACKAGE-$VERSION")
-		USERLIST_TO_INSTALL=(${NEWLIST[@]})
+	for F in $sortedbyversion; do
+		debug_message "F: $F"
+		var_stability=$(grep STABILITY "$BUILDME_DIR/$category/$package/$F" | sed -nr 's/STABILITY="([~_a-zA-Z0-9${} ]*)".*/\1/p')
+		make_stability=$STABILITY
+
+		debug_message "var stability: $var_stability"
+		debug_message "make stability: $make_stability"
+
+		for S in $var_stability; do
+			if [ "$S" = "$make_stability" ]; then
+				sortedbystability+=$"$F "
+			fi
+		done
+	done
+
+	debug_message "sortedbystability: $sortedbystability"
+
+	#checking for more new package
+	# will delete all versions if REMOVE and no version definded
+
+	for I in $sortedbystability; do
+		debug_message "I: $I"
+		max=0
+
+		if [[ "$I" =~ $regex4 ]]; then
+			if [[ "${BASH_REMATCH[3]}" > "$max" ]]; then
+				max="${BASH_REMATCH[3]}"
+			fi
+		fi
+		debug_message "max: $max"
+	done
+
+	if [ "$max" = 0 ]; then
+		echo "no mached version found"
+		return 1
 	fi
-#	echo ===================================
-#	echo "list to install from search: ${USERLIST_TO_INSTALL[@]}"
+
+	CATEGORY=$category
+	PACKAGE=$package
+	VERSION=$max
+
+
+	if [ "$look_for_dep" = "yes" ]; then
+		DEP="$CATEGORY/$PACKAGE-$VERSION"
+		#add_variable DEP
+	else
+		if [ -z $USERLIST_TO_INSTALL ]; then
+			USERLIST_TO_INSTALL="$CATEGORY/$PACKAGE-$VERSION"
+		else
+			NEWLIST=(${USERLIST_TO_INSTALL[@]} "$CATEGORY/$PACKAGE-$VERSION")
+			USERLIST_TO_INSTALL=(${NEWLIST[@]})
+		fi
+		#echo ===================================
+		#echo "list to install from search: ${USERLIST_TO_INSTALL[@]}"
+	fi
+
+# end of REMOVE
 fi
 
 unset CATEGORY PACKAGE VERSION
@@ -182,9 +242,7 @@ unset count found max F I S filenames var_stability make_stability sortedbystabi
 # ( set -o posix ; set )
 
 done
-########
-#add_array USERLIST_TO_INSTALL
-#print_variable >> $SIMPLEBUILD_DIR/VARIABLES
+
 }
 
 ################################################################################
@@ -239,6 +297,7 @@ for CPV in $look; do
 		fi
 	else
 		debug_message "BDEPEND is not definded"
+
 	fi
 
 BDEP=("$bdep")
@@ -284,10 +343,11 @@ done
 
 }
 ################################################################################
+
 search_in_categories $@ || exit 1
 
 if [ "$REMOVE" = "true" ]; then
-	add_variable USERLIST_TO_INSTALL
+	add_variable REMOVE_LIST
 	print_variable >> "$SIMPLEBUILD_DIR/bashrc"
 	exit 0
 fi
@@ -295,6 +355,5 @@ fi
 get_dep || exit 1
 
 add_variable USERLIST_TO_INSTALL
-
 print_variable >> "$SIMPLEBUILD_DIR/bashrc"
 
