@@ -14,7 +14,7 @@ if [ -f /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"/CONTENT ]; then
 				rm -f -- "${BASH_REMATCH[2]}"
 			fi
 		else
-			content regex failed
+			echo "content regex failed"
 			return 1
 		fi
 	done </var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"/CONTENT
