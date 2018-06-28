@@ -549,7 +549,9 @@ if [ ! -f "Makefile" ]; then
 	exit 1
 fi
 
-BROOT=$BROOT sandbox printenv
+BROOT=$BROOT sandbox make $MAKEFLAGS DESTDIR=${D} $@
+
+#BROOT=$BROOT sandbox printenv
 #$MAKEFLAGS DESTDIR=${D} $@
 }
 ####################################
