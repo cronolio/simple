@@ -65,9 +65,9 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 	broot=$(grep BROOT $SIMPLEBUILD_DIR/bashrc | sed -nr 's/BROOT="([^"]*?)(")/\1/p')
 
 	if [ -d "$broot" ]; then
-		path_regex="("$SIMPLEBUILD_DIR")(/)([-a-z]+)(/)([-_a-z0-9.]+)"
+		path_regex="($SIMPLEBUILD_DIR)(/)([-a-z]+)(/)([-_a-z0-9.]+)"
 
-		if [[ "$broot" =~ $(echo "$path_regex") ]]; then
+		if [[ "$broot" =~ $path_regex ]]; then
 			if [ "${BASH_REMATCH[1]}" != "$SIMPLEBUILD_DIR" ]; then
 				echo "Checking for safe prefix in '$BROOT' failed. Should be $SIMPLEBUILD_DIR"
 				exit 1
