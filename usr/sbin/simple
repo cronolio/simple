@@ -66,6 +66,7 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 
 	if [ -d "$broot" ]; then
 		path_regex="($SIMPLEBUILD_DIR)(/)([-a-z]+)(/)([-_a-z0-9.]+)"
+		debug_message "broot is: $broot"
 
 		if [[ "$broot" =~ $path_regex ]]; then
 			if [ "${BASH_REMATCH[1]}" != "$SIMPLEBUILD_DIR" ]; then
