@@ -12,6 +12,8 @@ else
 fi
 
 shopt -s globstar
+shopt -s nullglob
+
 for line in ** ; do
 	if [ "$line" = "." ]; then
 		continue
@@ -49,6 +51,7 @@ for line in ** ; do
 	echo "otr /$line $(md5sum $line | cut -d ' ' -f1)"
 done > /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"/CONTENT
 shopt -u globstar
+shopt -u nullglob
 
 # copy all files to real system
 cp -r --preserve=all * / || return 1
