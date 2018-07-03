@@ -1,0 +1,46 @@
+#!/bin/bash
+
+unpack_archives(){
+cd $HOME
+source /usr/lib/simple/libsimple
+CPV=$1
+BUILDME_FILE=$BUILDME_DIR/$CATEGORY/$PACKAGE/$PACKAGE-$VERSION.buildme
+source $BUILDME_FILE
+
+if [[ $(if_renamed_source) != true ]]; then
+	FAN=$(echo "$SRC_URL" | sed -r 's#.*\/([-_a-z0-9.]*)#\1#')
+else
+	FAN=$(echo "$SRC_URL" | tr -s [:space:] ' ' | cut -d ' ' -f3)
+fi
+
+mkdir -p "$BROOT" || return 1
+mkdir -p "$S" || return 1
+mkdir -p "$D" || return 1
+mkdir -p "$B" || return 1
+
+if ! type simple_unpack > /dev/null 2>&1
+	then echo -e "\e[96msimple_unpack() is not definded in buildme file. Runing default\e[0m"
+
+	echo -en "\e[96mUnpacking source for $FAN ...  \e[0m"
+	tar -xf "$DISTDIR/$FAN" -C "$S" || return 1
+	S="$BROOT/srcdir/$PACKAGE-$VERSION"
+	echo -e "\e[96mDONE \e[0m"
+
+else
+	echo -e "\e[96mRun simple_unpack() from buildme file\e[0m"
+	simple_unpack
+fi
+}
+
+add_environment(){
+
+add_variable CATEGORY PACKAGE VERSION BUILDME_FILE FAN BROOT S B D
+
+mkdir -p "$BROOT/varlog"
+cp /var/tmp/simple/bashrc "$BROOT/varlog/variables"
+print_variable >> "$BROOT/varlog/variables"
+}
+
+unpack_archives $1
+add_environment
+#echo package $PACKAGE
