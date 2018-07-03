@@ -23,7 +23,12 @@ if ! type simple_unpack > /dev/null 2>&1
 
 	echo -en "\e[96mUnpacking source for $FAN ...  \e[0m"
 	tar -xf "$DISTDIR/$FAN" -C "$S" || return 1
-	S="$BROOT/srcdir/$PACKAGE-$VERSION"
+	#check if source in directory or not
+	if [ -d "$S/$PACKAGE-$VERSION" ]; then
+		S="$BROOT/srcdir/$PACKAGE-$VERSION"
+	else
+		S="$BROOT"/srcdir
+	fi
 	echo -e "\e[96mDONE \e[0m"
 
 else
