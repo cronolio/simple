@@ -30,16 +30,12 @@ cd $SIMPLEBUILD_DIR
 get_variables $CPV
 
 BROOT="$SIMPLEBUILD_DIR/$CATEGORY/$PACKAGE-$VERSION"
-S="$BROOT/srcdir"
-B="$BROOT/builddir/$PACKAGE-$VERSION"
-D="$BROOT/installed"
 
-export CATEGORY PACKAGE VERSION BROOT S B D
-
-
-cd "$B"
+BROOT="$SIMPLEBUILD_DIR/$CATEGORY/$PACKAGE-$VERSION"
 source "$BROOT/varlog/variables"
 source "$BUILDME_FILE"
+cd "$B"
+export CATEGORY PACKAGE VERSION BROOT S B D
 }
 
 setup_env $1
