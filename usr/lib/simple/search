@@ -6,7 +6,7 @@
 #echo "arguments $@"
 
 search_in_categories() {
-# if / in an agument, then category "known" (required to check if category really available)
+# if / in an argument, then category "known" (required to check if category really available)
 # in this case we use search directly with this category
 # if no / , then search package via each category
 # if = is used, then we prefer this version at the end of search (if stability allow it)
