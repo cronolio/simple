@@ -184,7 +184,7 @@ else
 
 		for S in $var_stability; do
 			if [ "$S" = "$make_stability" ]; then
-				sortedbystability+=$"$F "
+				sortedbystability+="$F "
 			fi
 		done
 	done
