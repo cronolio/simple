@@ -41,12 +41,12 @@ if [ -v category ]; then
 		if [ "$REMOVE" = "true" ]; then
 			[ ! -d "/var/lib/pkg/$category" ] && echo "/var/lib/pkg/$category not a directory" && return 1
 			pushd "/var/lib/pkg/$category" > /dev/null 2>&1 || return 1
-			filenames=$(find ./ -maxdepth 1 -type d -name "$package*" ! -name . -prune -printf '%P\n')
+			filenames=$(find ./ -maxdepth 1 -type d -name "$package*" ! -name . -prune -printf '%P ')
 			popd > /dev/null 2>&1 || return 1
 		else
 			[ ! -d "$BUILDME_DIR/$category/$package" ] && echo "$BUILDME_DIR/$category/$package not a directory" && return 1
 			pushd "$BUILDME_DIR/$category/$package" > /dev/null 2>&1 || return 1
-			filenames=$(find ./ -maxdepth 1 -type f -name "*.buildme" ! -name . -prune -printf '%P\n')
+			filenames=$(find ./ -maxdepth 1 -type f -name "*.buildme" ! -name . -prune -printf '%P ')
 			popd > /dev/null 2>&1 || return 1
 		fi
 
@@ -122,7 +122,7 @@ else
 		debug_message "package: $package"
 
 		pushd "$BUILDME_DIR/$category/$package" > /dev/null 2>&1 || return 1
-		filenames=$(find ./ -maxdepth 1 -type f -name "*.buildme" ! -name . -prune -printf '%P\n')
+		filenames=$(find ./ -maxdepth 1 -type f -name "*.buildme" ! -name . -prune -printf '%P ')
 		popd > /dev/null 2>&1 || return 1
 
 		if [ -z "$filenames" ]; then
