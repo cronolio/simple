@@ -215,6 +215,28 @@ else
 	PACKAGE=$package
 	VERSION=$max
 
+######################################################
+	# checking if package is installed
+	if [ -d /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION" ]; then
+		# if package and version the same then the package is installed
+		debug_message "package with the same version already installed"
+		INSTALLED_LIST+="$CATEGORY/$PACKAGE-$VERSION "
+	else
+		#checking if some version of this package is installed
+		shopt -s nullglob
+		for d in /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-* ; do
+			debug_message "installed $d package with another version"
+		done
+		shopt -u nullglob
+
+		if [ -v d ]; then
+			echo "installed $d package with another version"
+			echo "update case"
+			echo "not implemented yet"
+			return 1
+		fi
+	fi
+#######################################################
 
 	if [ "$look_for_dep" = "yes" ]; then
 		DEP="$CATEGORY/$PACKAGE-$VERSION"
@@ -236,7 +258,7 @@ fi
 unset CATEGORY PACKAGE VERSION
 unset same_version less_version more_version
 unset CP category package raw_package separator ver_modif ver_sep version
-unset count found max F I S filenames var_stability make_stability sortedbystability sortedbyversion
+unset count found max d F I S filenames var_stability make_stability sortedbystability sortedbyversion
 
 #show all variables
 # ( set -o posix ; set )
@@ -353,6 +375,10 @@ if [ "$REMOVE" = "true" ]; then
 fi
 
 get_dep || exit 1
+
+if [ -v INSTALLED_LIST ]; then
+	add_variable INSTALLED_LIST
+fi
 
 add_variable USERLIST_TO_INSTALL
 print_variable >> "$SIMPLEBUILD_DIR/bashrc"
