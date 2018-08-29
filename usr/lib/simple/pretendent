@@ -1,10 +1,26 @@
 #!/bin/bash
 
 CPV=$1
-cd $HOME
 source /usr/lib/simple/libsimple
 source $SIMPLEBUILD_DIR/bashrc
+cd $SIMPLEBUILD_DIR
 
-for CPV in ${USERLIST_TO_INSTALL[@]}; do
-	echo $CPV
-done
+if [ -v REMOVE_LIST ]; then
+	echo "package to remove is: $REMOVE_LIST"
+else
+	for CPV in ${USERLIST_TO_INSTALL[@]}; do
+		for p in $INSTALLED_LIST; do
+			count=0
+			if [ "$p" = "$CPV" ]; then
+				echo "$CPV -> installed"
+				count=$(("$count" + 1))
+			fi
+		done
+
+		if [ "$count" = 0 ]; then
+			echo "$CPV"
+		fi
+	done
+fi
+
+unset p CPV count
