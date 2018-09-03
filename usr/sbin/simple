@@ -58,6 +58,19 @@ BASH_ENV="$SIMPLEBUILD_DIR/bashrc" su simple -s /bin/bash /usr/lib/simple/fetch
 run_all_build(){
 source $SIMPLEBUILD_DIR/bashrc
 for CPV in ${USERLIST_TO_INSTALL[@]}; do
+	installed=no
+	for IPV in ${INSTALLED_LIST}; do
+		if [ "$CPV" = "$IPV" ]; then
+			installed=yes
+		fi
+	done
+
+	if [ "$installed" = "yes" ]; then
+		echo -e "\e[96m$IPV package already installed. continue...\e[0m"
+		continue
+	fi
+
+
 	BASH_ENV="$SIMPLEBUILD_DIR/bashrc" su simple -s /bin/bash /usr/lib/simple/all_build -- $CPV -setup_env
 
 	# Checking if previous source is present and delete	
