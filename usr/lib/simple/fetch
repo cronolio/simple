@@ -2,13 +2,10 @@
 
 fetch_files(){
 
-cd $HOME
-
 source /usr/lib/simple/libsimple
+source $SIMPLEBUILD_DIR/bashrc
+cd $SIMPLEBUILD_DIR
 
-#( set -o posix ; set )
-
-#exit 0
 
 for CPV in ${USERLIST_TO_INSTALL[@]}; do
 	get_variables $CPV
