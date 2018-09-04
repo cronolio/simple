@@ -27,7 +27,7 @@ for line in ** ; do
 	#http://sco.com/developers/gabi/latest/ch4.eheader.html
 	# not sure about  \0\0..
 	read -rN 17 byte <"$line"
-	if [[ "$byte" =~ $'\x7f'(ELF)($'\x01'|$'\x02')($'\x01'|$'\x02')($'\x01'|$'\x02')$'\x00'$'\x00'($'\x01'|$'\x02'|$'\x03') ]]; $
+	if [[ "$byte" =~ $'\x7f'(ELF)($'\x01'|$'\x02')($'\x01'|$'\x02')($'\x01'|$'\x02')$'\x00'$'\x00'($'\x01'|$'\x02'|$'\x03') ]]; then
 		if [[ "${BASH_REMATCH[5]}" = $'\x02' || "${BASH_REMATCH[5]}" = $'\x03' ]]; then
 			if [ "${BASH_REMATCH[2]}" = $'\x02' ]; then
 				abi="64"
