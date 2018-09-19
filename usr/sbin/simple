@@ -1,5 +1,18 @@
 #!/bin/bash
 
+show_help(){
+tabs -4
+cat << 'EOF'
+simple [options] package ...
+
+options:
+	-p, --pretendent	pretendent
+	-r, --remove		remove package
+	-d, --debug		show debug info
+	-h, --help		help (this massage)
+EOF
+}
+
 sourcing(){
 ######-path-#########
 if [ -d /tools ]; then
@@ -145,6 +158,12 @@ if [ $# -gt 0 ]; then
 					add_variable REMOVE
 					option="$i $option"
 				fi
+				if [[ "$i" = "-h" || "$i" = "--help" ]]; then
+					good=true
+					option="$i $option"
+					show_help
+					exit 0
+				fi
 
 				#bad options
 				if [[ "$good" = false ]]; then
@@ -204,6 +223,6 @@ unset a b i k l bad_option good count_arg count_bad known option regex_option
 	run_fetch || exit 1
 	run_all_build || exit 1
 else
-	echo show help here
+	show_help
 	exit 0
 fi
