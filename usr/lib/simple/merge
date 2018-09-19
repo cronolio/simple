@@ -55,8 +55,9 @@ shopt -u globstar nullglob
 cp -r --preserve=all * / || return 1
 
 # remove work direcory and category if empty
-rm -rf -- /var/tmp/simple/"$CATEGORY"/"$PACKAGE"-"$VERSION"
+rm -rf -- "$BROOT"
 rmdir -- /var/tmp/simple/"$CATEGORY" 2> /dev/null
+rm -- "$SIMPLEBUILD_DIR"/bashrc
 
 echo "Ok"
 }
