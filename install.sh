@@ -47,3 +47,5 @@ chmod 644  /usr/lib/simple/libsimple
 chown root:root /usr/lib/simple/{install,merge,remove}
 
 install -v -m754  usr/sbin/simple /usr/sbin
+
+install -vd /var/cache/simple/{buildme,distfiles}
