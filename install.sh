@@ -35,9 +35,6 @@ else
 	useradd -s /bin/false -d /var/tmp/simple -g simple --uid 250 -m -k /dev/null simple
 fi
 
-mkdir -vp /etc/simple
-cp etc/simple/make.conf /etc/simple
-
 install -vd  /etc/simple
 install -v -m644  etc/simple/make.conf /etc/simple
 
