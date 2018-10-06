@@ -53,3 +53,4 @@ install -vd /var/cache/simple/{buildme,distfiles}
 cd /var/cache/simple/buildme
 wget https://github.com/cronolio/repo/archive/master.tar.gz
 tar -xf master.tar.gz --strip 1
+rm -f master.tar.gz
