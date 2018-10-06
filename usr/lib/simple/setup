@@ -1,0 +1,22 @@
+#!/bin/bash
+
+setup_source(){
+
+if ! type simple_setup > /dev/null 2>&1
+	then echo -e "\e[96msimple_setup() is not definded in buildme file. Runing default\e[0m"
+
+	echo zzzzzzzzzzzzzzzzz
+	return 1
+else
+	echo -e "\e[96mRun simple_setup() from buildme file\e[0m"
+	simple_setup
+fi
+
+}
+
+cd "$B"
+source /usr/lib/simple/libsimple
+source "$BROOT/varlog/variables"
+source /var/tmp/simple/bashrc
+source "$BUILDME_FILE"
+setup_source
