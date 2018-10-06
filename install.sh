@@ -49,7 +49,7 @@ chown root:root /usr/lib/simple/{install,merge,remove}
 install -v -m754  usr/sbin/simple /usr/sbin
 
 install -vd /var/cache/simple/{buildme,distfiles}
-
+chown simple:simple /var/cache/simple/distfiles
 cd /var/cache/simple/buildme
 wget https://github.com/cronolio/repo/archive/master.tar.gz
 tar -xf master.tar.gz --strip 1
