@@ -211,7 +211,7 @@ unset a b i k l bad_option good count_arg count_bad known option regex_option
 	sourcing || exit 1
 	run_search $arg || exit 1
 	
-	if [ -n $PRETENDENT ]; then
+	if [ -v PRETENDENT ]; then
 		run_show_pretendent || exit 1
 		exit 0
 	fi
