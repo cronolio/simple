@@ -4,7 +4,7 @@ remove_files(){
 echo -n -e "\e[96mRemoving $CATEGORY/$PACKAGE-$VERSION  \e[0m"
 
 if [ -f /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"/CONTENT ]; then
-	content_regex=$'(dir|otr|elf32|elf64|sym) ([^ \f\n\r\t\v]+).*'
+	content_regex=$'(dir|otr|elf_32|elf_64|sym) ([^ \f\n\r\t\v]+).*'
 	while read -r line; do
 		if [[ "$line" =~ $content_regex ]]; then
 			if [ "${BASH_REMATCH[1]}" = "dir" ]; then
