@@ -25,6 +25,8 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 		return 1
 	fi
 
+	unset LINE NEW_LINE
+
 	if [[ $(cat $BUILDME_FILE) =~ $regexMD5_SUM ]]; then
 		MD5_SUM="${BASH_REMATCH[2]}"
 	else
@@ -87,7 +89,7 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 	debug_message "\e[96mFile have  $FILE_SUM\e[0m"
 	debug_message "\e[96mCorrect is $ORIG_SUM\e[0m"
 
-	unset FILE_SUM ORIG_SUM
+	unset FILE_SUM ORIG_SUM SRC_URL SRC_URL_RENAMED FILE_NAME
 	unset CATEGORY PACKAGE VERSION category package raw_package ver_modif ver_sep version
 
 done
