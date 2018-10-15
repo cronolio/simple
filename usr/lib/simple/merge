@@ -51,6 +51,12 @@ for line in ** ; do
 			continue
 		fi
 	fi
+	
+	#we will create this file later on real system (with all other files)
+	if [ "$line" = "usr/share/info/dir" ]; then
+		continue
+	fi
+	
 	echo "otr /$line $(md5sum $line | cut -d ' ' -f1)"
 	
 	if [ -e /"$line" ]; then
@@ -65,6 +71,13 @@ if [[ "${#exist[@]}" != 0 ]]; then
 	echo -e "\e[31mSome files already exist. below the list\e[0m"
 	echo "${exist[@]}"
 	return 1
+fi
+
+# remove uneeded files
+if [ -f ${D}/usr/share/info/dir ]; then
+	rm ${D}/usr/share/info/dir
+	echo "write a trigger to readd all info files on real system"
+	echo 'like "pushd /usr/share/info; rm -v dir; for f in *; do; install-info $f dir 2>/dev/null; done; popd"'
 fi
 
 # copy content list
