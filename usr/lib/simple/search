@@ -220,7 +220,18 @@ else
 	if [ -d /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION" ]; then
 		# if package and version the same then the package is installed
 		debug_message "package with the same version already installed"
-		INSTALLED_LIST+="$CATEGORY/$PACKAGE-$VERSION "
+
+		#check if package already in list
+		alreadylisted=no
+		for p in $INSTALLED_LIST; do
+			if [ "$CATEGORY/$PACKAGE-$VERSION" = $p ]; then
+				alreadylisted=yes
+			fi
+		done
+        	if [ $alreadylisted = no ]; then
+			INSTALLED_LIST+="$CATEGORY/$PACKAGE-$VERSION "
+		fi
+		unset alreadylisted
 	else
 		#checking if some version of this package is installed
 		shopt -s nullglob
