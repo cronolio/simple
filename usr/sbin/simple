@@ -133,6 +133,7 @@ done
 ##### body ######
 #zapuskator
 source /usr/lib/simple/libsimple
+sourcing || { echo -e "\e[31m  * sourcing failed\e[0m" && exit 1; }
 
 if [ $# -gt 0 ]; then
 	regex_option="(^-).*?"
@@ -178,38 +179,55 @@ if [ $# -gt 0 ]; then
 		fi
 	done
 
-#removing bad options
-	for k in "$@"; do
-		count_bad=0
-		for b in $bad_option; do
-			if [[ "$k" = "$b" ]]; then
-				count_bad=$((count_bad + 1))
+	all_option="$option $bad_option"
+	unset i good regex_option option bad_option
+
+#removing all options and after -- don't check if option
+	for a in "$@"; do
+		isoption=false
+
+		if [[ "$a" != '--' ]]; then
+			if [[ "$end_option" != true ]]; then
+				for all in $all_option; do
+					if [[ "$a" = "$all" ]]; then
+						isoption=true
+					fi
+				done
+
+				if [[ "$isoption" = false ]]; then
+					argx="$argx $a"
+				fi
+			else
+				argx="$argx $a"
 			fi
-		done
-		if [[ $count_bad = 0 ]]; then
-			known="$k $known"
+		else
+			# case -- options is end
+			end_option=true
 		fi
 	done
 
-	for k in $known; do
-		count_arg=0
-		for l in $option; do
-			if [[ "$k" = "$l" ]]; then
-				count_arg=$((count_arg + 1))
-			fi
-		done
+	unset a all isoption end_option
 
-		if [[ $count_arg = 0 ]]; then
-			arg="$k $arg"
+# expand @ (toolchain, system, world)
+	for a in $argx; do
+		isset=false
+		if [[ "$a" = '@system' || "$a" = '@toolchain' ]]; then
+			myset=$(grep '^[^#]' "$BUILDME_DIR"/profiles/${a:1} | tr -s [:space:] ' ')
+			isset=true
+		fi
+		if [[ "$isset" = false ]]; then
+			argy="$argy $a"
 		fi
 	done
 
-	echo "all arg $arg"
+	arg="$myset $argy"
+	arg=$(echo -e $arg) #eat spaces
 
-unset a b i k l bad_option good count_arg count_bad known option regex_option
+	unset a myset argy argx isset
+	echo "all arg: $arg"
 
-	sourcing || exit 1
-	run_search $arg || exit 1
+
+	run_search $arg || { echo -e "\e[31m  * run_search failed\e[0m" && exit 1; }
 	
 	if [ -v PRETENDENT ]; then
 		run_show_pretendent || exit 1
