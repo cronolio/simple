@@ -230,16 +230,16 @@ if [ $# -gt 0 ]; then
 	run_search $arg || { echo -e "\e[31m  * run_search failed\e[0m" && exit 1; }
 	
 	if [ -v PRETENDENT ]; then
-		run_show_pretendent || exit 1
+		run_show_pretendent || { echo -e "\e[31m  * run_show_pretendent failed\e[0m" && exit 1; }
 		exit 0
 	fi
 	if [ -v REMOVE ]; then
-		run_remove || exit 1
+		run_remove || { echo -e "\e[31m  * run_remove failed\e[0m" && exit 1; }
 		exit 0
 	fi
 	
-	run_fetch || exit 1
-	run_all_build || exit 1
+	run_fetch || { echo -e "\e[31m  * run_fetch failed\e[0m" && exit 1; }
+	run_all_build || { echo -e "\e[31m  * run_all_build failed\e[0m" && exit 1; }
 else
 	show_help
 	exit 0
