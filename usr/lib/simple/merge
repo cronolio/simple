@@ -121,4 +121,4 @@ source "$BUILDME_FILE"
 }
 
 setup_env $1 || exit 1
-run_merge || exit 1
+run_merge || { echo -e "\e[31m  * run_merge failed\e[0m" && exit 1; }
