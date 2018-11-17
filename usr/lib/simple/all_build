@@ -14,7 +14,7 @@
 
 setup_env(){
 CPV=$1
-cd $HOME
+cd $SIMPLEBUILD_DIR
 source /usr/lib/simple/libsimple
 get_variables $CPV
 
@@ -36,7 +36,7 @@ fi
 
 all_build(){
 CPV=$1
-cd $HOME
+cd $SIMPLEBUILD_DIR
 source /usr/lib/simple/libsimple
 get_variables $CPV
 
@@ -117,5 +117,5 @@ if [ $# = 2 ]; then
 
 else
 	echo 'should be $CPV and -setup_env or -all_build'
-	return 1
+	exit 1
 fi
