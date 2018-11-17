@@ -1,5 +1,11 @@
 #!/bin/bash
 
+setup_env(){
+source /usr/lib/simple/libsimple
+source /var/tmp/simple/bashrc
+cd $SIMPLEBUILD_DIR
+}
+
 remove_files(){
 echo -n -e "\e[96mRemoving $CATEGORY/$PACKAGE-$VERSION  \e[0m"
 
@@ -19,7 +25,7 @@ if [ -f /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"/CONTENT ]; then
 		fi
 	done </var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"/CONTENT
 
-	fhs_dirs=$(cat /usr/lib/simple/fhs_dirs)
+	fhs_dirs=$(grep '^[^#]' /usr/lib/simple/fhs_dirs)
 
 	for package_dir in $package_dirs; do
 		#echo package_dir $package_dir
@@ -52,17 +58,25 @@ fi
 
 }
 
-setup_env(){
-source /usr/lib/simple/libsimple
-source /var/tmp/simple/bashrc
-cd $SIMPLEBUILD_DIR
+run_post_remove(){
+BUILDME_FILE=$BUILDME_DIR/$CATEGORY/$PACKAGE/$PACKAGE-$VERSION.buildme
+source $BUILDME_FILE
+if type simple_post_remove > /dev/null 2>&1 ; then
+	echo -e "\e[96mRuning simple_post_remove\e[0m"
+	simple_post_remove || { echo -e "\e[31m  * post_remove failed\e[0m" && return 1; }
+	echo -e "\e[96mOk\e[0m"
+fi
+}
 
+run_remove_files(){
 for CPV in $REMOVE_LIST; do
 	get_variables $CPV
-	remove_files
+	remove_files || { echo -e "\e[31m  * remove_files failed\e[0m" && return 1; }
+	run_post_remove || { echo -e "\e[31m  * run_post_remove failed\e[0m" && return 1; }
 done
 }
 
+setup_env || exit 1
+run_remove_files || exit 1
 
-setup_env
 
