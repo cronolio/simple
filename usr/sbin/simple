@@ -226,6 +226,8 @@ if [ $# -gt 0 ]; then
 	unset a myset argy argx isset
 	echo "all arg: $arg"
 
+	# readd variables after paremeter is parsed
+	print_variable > $SIMPLEBUILD_DIR/bashrc
 
 	run_search $arg || { echo -e "\e[31m  * run_search failed\e[0m" && exit 1; }
 	
