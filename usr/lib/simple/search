@@ -51,7 +51,7 @@ if [ -v category ]; then
 		fi
 
 		if [ -z "$filenames" ]; then
-			if [ "$REMOVE" = "true" ]; then
+			if [ "$REMOVE" = 'true' ]; then
 				echo "Category is definded but no matched directory in /var/lib/pkg/$category is not found"
 			else
 				echo "Category is definded but no any file in $BUILDME_DIR/$category/$package is not found"
@@ -69,7 +69,7 @@ if [ -v category ]; then
 else
 	debug_message "category not known"
 	count=0
-	if [ "$REMOVE" = "true" ]; then
+	if [ "$REMOVE" = 'true' ]; then
 		for entry in $(cat "$BUILDME_DIR"/profiles/categories); do
 			CPV=$(
 				pushd "/var/lib/pkg" > /dev/null 2>&1 || return 1
@@ -84,7 +84,11 @@ else
 		found=$(echo -e $found) #eat whitespace
 
 		if [ -z "$found" ]; then
-			echo "Category for $raw_package is not found"
+			if [ "$REMOVE" = 'true' ]; then
+				echo "Category for $raw_package in /var/lib/pkg is not found. Package not installed?"
+			else
+				echo "Category for $raw_package is not found"
+			fi
 			return 1
 		fi
 
