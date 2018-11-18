@@ -47,9 +47,6 @@ fi
 
 add_variable PATH ETC_DIR BUILDME_DIR DISTDIR SIMPLEBUILD_DIR
 add_variable CFLAGS CXXFLAGS CPPFLAGS LDFLAGS MAKEFLAGS STABILITY LINGUAS USE
-
-print_variable > $SIMPLEBUILD_DIR/bashrc
-chown simple:simple $SIMPLEBUILD_DIR/bashrc
 }
 
 run_search(){
@@ -226,8 +223,9 @@ if [ $# -gt 0 ]; then
 	unset a myset argy argx isset
 	echo "all arg: $arg"
 
-	# readd variables after paremeter is parsed
+	# print variables to bashrc file
 	print_variable > $SIMPLEBUILD_DIR/bashrc
+	chown simple:simple $SIMPLEBUILD_DIR/bashrc
 
 	run_search $arg || { echo -e "\e[31m  * run_search failed\e[0m" && exit 1; }
 	
