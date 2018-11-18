@@ -222,6 +222,11 @@ if [ $# -gt 0 ]; then
 
 	unset a myset argy argx isset
 	echo "all arg: $arg"
+	
+	if [ -z $arg ]; then
+		echo -e "\e[31mat least one package required\e[0m"
+		exit 1
+	fi
 
 	# print variables to bashrc file
 	print_variable > $SIMPLEBUILD_DIR/bashrc
