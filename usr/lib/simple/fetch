@@ -95,4 +95,4 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 done
 }
 
-fetch_files || echo "fetch fail" && exit 1
+fetch_files || { echo -e "\e[31m  * fetch_files failed\e[0m" && exit 1; }
