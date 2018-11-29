@@ -47,10 +47,10 @@ D="$BROOT/installed"
 
 export CATEGORY PACKAGE VERSION BROOT S B D MAKEFLAGS CFLAGS CXXFLAGS LDFLAGS
 
-/usr/lib/simple/unpack $1
+/usr/lib/simple/unpack $1 || return 1
 #/usr/lib/simple/patch $1
-/usr/lib/simple/setup
-/usr/lib/simple/compile
+/usr/lib/simple/setup || return 1
+/usr/lib/simple/compile || return 1
 }
 
 # all_build $CPV '-arg' || all_build '-arg' $CPV
@@ -59,7 +59,7 @@ if [ $# = 2 ]; then
 	regex_option="(^-).*?"
 	for i in "$@"; do
 		if [[ "$i" =~ $regex_option ]]; then
-			if [[ "$i" != "--" ]]; then
+			if [[ "$i" != '--' ]]; then
 				good=false
 				if [[ "$i" = "-setup_env" ]]; then
 					need_to_run=setup_env
@@ -113,7 +113,7 @@ if [ $# = 2 ]; then
 
 	unset a b i k l bad_option good count_arg count_bad known option regex_option
 
-	$need_to_run $arg
+	$need_to_run $arg || exit 1
 
 else
 	echo 'should be $CPV and -setup_env or -all_build'
