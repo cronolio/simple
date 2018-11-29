@@ -9,7 +9,7 @@ options:
 	-p, --pretendent	pretendent
 	-r, --remove		remove package
 	-d, --debug		show debug info
-	-h, --help		help (this massage)
+	-h, --help		help (this message)
 EOF
 }
 
@@ -94,7 +94,7 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 		if [[ "$broot" =~ $path_regex ]]; then
 			if [ "${BASH_REMATCH[1]}" != "$SIMPLEBUILD_DIR" ]; then
 				echo "Checking for safe prefix in '$BROOT' failed. Should be $SIMPLEBUILD_DIR"
-				exit 1
+				return 1
 			fi
 
 			echo -e "\e[96mDelete previous Source\e[0m"
@@ -110,7 +110,7 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 			fi
 		else
 			echo 'path_regex for $BROOT failed'
-			exit 1
+			return 1
 		fi
 	fi
 
@@ -121,8 +121,8 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 
 	BASH_ENV="$SIMPLEBUILD_DIR/bashrc" su simple -s /bin/bash /usr/lib/simple/all_build -- $CPV -all_build
 
-	/usr/lib/simple/install $CPV || return 1
-	/usr/lib/simple/merge $CPV
+	/usr/lib/simple/install $CPV || { echo -e "\e[31m  * install failed\e[0m" && return 1; }
+	/usr/lib/simple/merge $CPV || { echo -e "\e[31m  * merge failed\e[0m" && return 1; }
 done
 }
 
@@ -136,7 +136,7 @@ if [ $# -gt 0 ]; then
 	regex_option="(^-).*?"
 	for i in "$@"; do
 		if [[ "$i" =~ $regex_option ]]; then
-			if [[ "$i" != "--" ]]; then
+			if [[ "$i" != '--' ]]; then
 				good=false
 				if [[ "$i" = "-p" || "$i" = "--pretendent" ]]; then
 					good=true
