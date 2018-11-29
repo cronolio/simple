@@ -19,4 +19,4 @@ source /usr/lib/simple/libsimple
 source "$BROOT/varlog/variables"
 source /var/tmp/simple/bashrc
 source "$BUILDME_FILE"
-setup_source
+setup_source || exit 1
