@@ -176,7 +176,7 @@ debug_message "sorted by version: $sortedbyversion"
 #checking stability
 # don't care about stability if REMOVE
 if [ "$REMOVE" = "true" ]; then
-	REMOVE_LIST="$sortedbyversion"
+	REMOVE_LIST+="$sortedbyversion "
 else
 	for F in $sortedbyversion; do
 		debug_message "F: $F"
