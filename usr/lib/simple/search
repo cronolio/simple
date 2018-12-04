@@ -51,7 +51,7 @@ if [ -v category ]; then
 			for d in *; do
 				if [[ -d "$d" && "$d" = "$package"* ]]; then
 					# with whitespace!!!
-					filenames+="$d "
+					filenames+="$category/$d "
 				fi
 				unset d
 			done
@@ -92,16 +92,17 @@ else
 	debug_message "category not known"
 	count=0
 	if [ "$REMOVE" = 'true' ]; then
-		for entry in $(cat "$BUILDME_DIR"/profiles/categories); do
-			CPV=$(
-				pushd "/var/lib/pkg" > /dev/null 2>&1 || return 1
-				find "$entry" -mindepth 1 -maxdepth 1 -type d -name "$package*" 2> /dev/null
-				popd > /dev/null 2>&1 || return 1
-				)
-			if [ ! -z "$CPV" ]; then
-				found+="$CPV " && count=$((count + 1))
-			fi
-		done
+		shopt -s nullglob extglob globstar
+		pushd "/var/lib/pkg" > /dev/null 2>&1 || return 1
+		while read -r entry; do
+			for d in **; do
+				if [[ -d "$d" && "$d" = "$entry"/"$package"* ]]; then
+					CPV+="$d " && count=$((count + 1))
+				fi
+			done
+		done <"$BUILDME_DIR"/profiles/categories
+		popd > /dev/null 2>&1 || return 1
+		shopt -u nullglob extglob globstar
 
 		found=$(echo -e $found) #eat whitespace
 
@@ -117,17 +118,14 @@ else
 		filenames="$found"
 
 	else
-		for entry in $(cat "$BUILDME_DIR"/profiles/categories); do
-    			CP=$(
-			pushd "$BUILDME_DIR" > /dev/null 2>&1 || return 1
-			find $entry -mindepth 1 -maxdepth 1 -type d -name "$package" 2> /dev/null
-			popd > /dev/null 2>&1 || return 1
-			)
 
-			if [ -n "$CP" ]; then
-				found+="$CP " && count=$((count + 1))
+		pushd "$BUILDME_DIR" > /dev/null 2>&1 || return 1
+		while read -r entry; do
+			if [ -d "$entry"/"$package" ]; then
+				found+="$entry/$package " && count=$((count + 1))
 			fi
-		done
+		done <"$BUILDME_DIR"/profiles/categories
+		popd > /dev/null 2>&1 || return 1
 
 		found=$(echo -e $found) #eat whitespace
 
@@ -148,7 +146,15 @@ else
 		debug_message "package: $package"
 
 		pushd "$BUILDME_DIR/$category/$package" > /dev/null 2>&1 || return 1
-		filenames=$(find ./ -maxdepth 1 -type f -name "*.buildme" ! -name . -prune -printf '%P ')
+		shopt -s nullglob extglob
+		for f in *; do
+			if [[ -f "$f" && "$f" = *'.buildme' ]]; then
+				# with whitespace!!!
+				filenames+="$f "
+			fi
+			unset f
+		done
+		shopt -u nullglob extglob
 		popd > /dev/null 2>&1 || return 1
 
 		if [ -z "$filenames" ]; then
