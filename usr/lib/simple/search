@@ -104,7 +104,7 @@ else
 		popd > /dev/null 2>&1 || return 1
 		shopt -u nullglob extglob globstar
 
-		found=$(echo -e $found) #eat whitespace
+		found=$(echo -e $CPV) #eat whitespace
 
 		if [ -z "$found" ]; then
 			if [ "$REMOVE" = 'true' ]; then
