@@ -239,10 +239,10 @@ echo ${variable[@]} | sed 's!\([)"]\) !\1\n!g'
 get_variables(){
 
 parse_var=$1
-echo parse_var $parse_var
+#echo parse_var $parse_var
 
 #run_search
-echo "get_variables called from function ${FUNCNAME[1]}"
+#echo "get_variables called from function ${FUNCNAME[1]}"
 
 if [[ ${FUNCNAME[1]} = search_in_categories || ${FUNCNAME[1]} = is_use_needed ]]; then
 	if [[ $parse_var =~ $regex1 ]]; then
