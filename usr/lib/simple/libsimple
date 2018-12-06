@@ -266,8 +266,8 @@ if [[ ${FUNCNAME[1]} = search_in_categories || ${FUNCNAME[1]} = is_use_needed ]]
 	fi
 fi
 
-#get_dep
-if [[ ${FUNCNAME[1]} = get_dep ]]; then
+#get_dep remove
+if [[ ${FUNCNAME[1]} = get_dep || ${FUNCNAME[1]} = run_remove_files ]]; then
 	if [[ $parse_var =~ $regex1 ]]; then
 		CATEGORY="${BASH_REMATCH[2]}" 
 		separator="${BASH_REMATCH[3]}"
