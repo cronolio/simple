@@ -1,16 +1,6 @@
 #!/bin/bash
 
-run_merge(){
-
-echo -e "\e[96mRunning merge  \e[0m"
-cd "$D" || return 1
-
-# check if software alredy installed
-if [ -d /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION" ]; then
-	echo "/var/lib/$CATEGORY/$PACKAGE-$VERSION already exist"
-	return 1
-fi
-
+get_content(){
 # check type of file and if alredy exist on real system (only for files and symlinks)
 shopt -s globstar nullglob
 
@@ -44,7 +34,16 @@ for line in ** ; do
 				if [ "$ldd_lib" != linux-vdso.so.1 ]; then
 					ldd_result+=($ldd_lib)
 				fi
-			done < <(ldd "$line")
+			done < <(if [ "$PACKAGE" = glibc ]; then
+					if [ ! -f /lib64/ld-linux-x86-64.so.2 ]; then
+						#case while no glibc. it will use fresh compiled ld
+						lib/ld-linux-x86-64.so.2 --list "$line" 2> /dev/null | sed -r -e 's#/tools##' -e 's#/lib/#/lib6 4/#'
+					else
+						/lib64/ld-linux-x86-64.so.2 --list "$line" 2> /dev/null
+					fi
+				else
+					/lib64/ld-linux-x86-64.so.2 --list "$line" 2> /dev/null
+				fi)
 
 			echo "elf_$abi /$line $(md5sum $line | cut -d ' ' -f1) ${ldd_result[@]}"
 			unset ldd_result byte abi
@@ -65,7 +64,9 @@ for line in ** ; do
 
 done > "$BROOT"/CONTENT
 shopt -u globstar nullglob
+}
 
+otk_checks(){
 # if some files alredy exists, then warn and exit
 if [[ "${#exist[@]}" != 0 ]]; then
 	echo -e "\e[31mSome files already exist. below the list\e[0m"
@@ -79,7 +80,9 @@ if [ -f ${D}/usr/share/info/dir ]; then
 	echo "write a trigger to readd all info files on real system"
 	echo 'like "pushd /usr/share/info; rm -v dir; for f in *; do; install-info $f dir 2>/dev/null; done; popd"'
 fi
+}
 
+run_merge(){
 # copy content list
 if [ ! -d /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION" ]; then
 	mkdir -p /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION" || return 1
@@ -91,6 +94,11 @@ fi
 
 # copy all files to real system
 cp -r --preserve=all * / || return 1
+
+if [[ "$PACKAGE" = glibc ]]; then
+	get_content
+	cp -f "$BROOT"/CONTENT /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"/
+fi
 
 # remove work direcory and category if empty
 rm -rf -- "$BROOT"
@@ -118,7 +126,20 @@ export CATEGORY PACKAGE VERSION BROOT S B D
 cd "$B"
 source "$BROOT/varlog/variables"
 source "$BUILDME_FILE"
+
+echo -e "\e[96mRunning merge  \e[0m"
+cd "$D" || return 1
+
+# check if software alredy installed
+if [ -d /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION" ]; then
+	echo "/var/lib/$CATEGORY/$PACKAGE-$VERSION already exist"
+	return 1
+fi
 }
 
+
 setup_env $1 || exit 1
+get_content || { echo -e "\e[31m  * get_content failed\e[0m" && exit 1; }
+otk_checks || { echo -e "\e[31m  * otk_checks failed\e[0m" && exit 1; }
 run_merge || { echo -e "\e[31m  * run_merge failed\e[0m" && exit 1; }
+
