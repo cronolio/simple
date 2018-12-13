@@ -29,20 +29,20 @@ for line in ** ; do
 				abi="32"
 			fi
 
+			regex_ldd="([^ ]+?)"
 			while read -r ldd_line; do
-				ldd_lib=$(echo "$ldd_line" | cut -d ' ' -f1)
-				if [ "$ldd_lib" != linux-vdso.so.1 ]; then
-					ldd_result+=($ldd_lib)
-				fi
-			done < <(if [ "$PACKAGE" = glibc ]; then
-					if [ ! -f /lib64/ld-linux-x86-64.so.2 ]; then
-						#case while no glibc. it will use fresh compiled ld
-						lib/ld-linux-x86-64.so.2 --list "$line" 2> /dev/null | sed -r -e 's#/tools##' -e 's#/lib/#/lib6 4/#'
-					else
-						/lib64/ld-linux-x86-64.so.2 --list "$line" 2> /dev/null
+				if [[ "$ldd_line" =~ $regex_ldd ]]; then
+					if [[ "${BASH_REMATCH[1]}" = 'statically' || "${BASH_REMATCH[1]}" = 'not' ]]; then
+						ldd_result+=(static)					
+					elif [ "${BASH_REMATCH[1]}" != linux-vdso.so.1 ]; then
+						ldd_result+=(${BASH_REMATCH[1]})
 					fi
+				fi
+			done < <(if [[ "$PACKAGE" = glibc && ! -f /lib64/ld-linux-x86-64.so.2 ]]; then
+					#case while no glibc. it will use fresh compiled ld
+					lib/ld-linux-x86-64.so.2 --list "$line" 2> /dev/null | sed -r -e 's#/tools##' -e 's#/lib/#/lib6 4/#'
 				else
-					/lib64/ld-linux-x86-64.so.2 --list "$line" 2> /dev/null
+					ldd "$line" 2> /dev/null
 				fi)
 
 			echo "elf_$abi /$line $(md5sum $line | cut -d ' ' -f1) ${ldd_result[@]}"
