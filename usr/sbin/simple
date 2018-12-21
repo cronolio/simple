@@ -76,7 +76,7 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 	done
 
 	if [ "$installed" = "yes" ]; then
-		echo -e "\e[96m$IPV package already installed. continue...\e[0m"
+		echo -e "\e[96m$CPV package already installed. Continue...\e[0m"
 		continue
 	fi
 
@@ -98,7 +98,7 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 			fi
 
 			echo -e "\e[96mDelete previous Source\e[0m"
-			rm -rf "$broot"
+			rm -rf -- "$broot"
 			
 			category="${BASH_REMATCH[3]}"
 
