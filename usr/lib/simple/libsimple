@@ -31,7 +31,7 @@ array_regex="(.*)(\(\[0\]=)"
 ###debug function
 # use "for all massage"
 debug_message() {
-if [ $DEBUG ]; then echo -e "$1"; fi
+if [ $DEBUG ]; then echo -e "$@"; fi
 }
 
 ################################################
