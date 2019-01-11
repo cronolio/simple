@@ -88,7 +88,7 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 	broot=$(grep BROOT $SIMPLEBUILD_DIR/bashrc | sed -nr 's/BROOT="([^"]*?)(")/\1/p')
 
 	if [ -d "$broot" ]; then
-		path_regex="($SIMPLEBUILD_DIR)(/)([-a-z]+)(/)([-_a-z0-9.]+)"
+		path_regex="($SIMPLEBUILD_DIR)(/)([-a-zA-Z]+)(/)([-_a-zA-Z0-9.]+)"
 		debug_message "broot is: $broot"
 
 		if [[ "$broot" =~ $path_regex ]]; then
