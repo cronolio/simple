@@ -1,10 +1,22 @@
 #!/bin/bash
 
+user_unpack(){
+if grep ^simple_unpack $BUILDME_FILE >/dev/null 2>&1; then
+	echo -e "\e[96mRun simple_unpack() from buildme file\e[0m"
+	source $BUILDME_FILE
+	if type simple_unpack > /dev/null 2>&1; then
+		simple_unpack || return 1
+	fi
+else
+	echo -e "\e[96msimple_unpack() is not definded in buildme file"
+fi
+}
+
 unpack_archives(){
 cd $SIMPLEBUILD_DIR
 source /usr/lib/simple/libsimple
 CPV=$1
-BUILDME_FILE=$BUILDME_DIR/$CATEGORY/$PACKAGE/$PACKAGE-$VERSION.buildme
+BUILDME_FILE=$BUILDME_DIR/$CATEGORY/$PACKAGE/$PACKAGE-$VERSION$raw_patch.buildme
 source $BUILDME_FILE
 
 if [[ $(if_renamed_source) != true ]]; then
@@ -18,34 +30,29 @@ mkdir -p "$S" || return 1
 mkdir -p "$D" || return 1
 mkdir -p "$B" || return 1
 
-if ! type simple_unpack > /dev/null 2>&1
-	then echo -e "\e[96msimple_unpack() is not definded in buildme file. Runing default\e[0m"
+echo -en "\e[96mUnpacking source for $FAN ...  \e[0m"
+tar -xf "$DISTDIR/$FAN" -C "$S" || return 1
 
-	echo -en "\e[96mUnpacking source for $FAN ...  \e[0m"
-	tar -xf "$DISTDIR/$FAN" -C "$S" || return 1
-	#check if source in directory or not
-	if [ -d "$S/$PACKAGE-$VERSION" ]; then
-		S="$BROOT/srcdir/$PACKAGE-$VERSION"
-	else
-		S="$BROOT"/srcdir
-	fi
-	echo -e "\e[96mDONE \e[0m"
-
+#check if source in directory or not
+if [ -d "$S/$PACKAGE-$VERSION" ]; then
+	S="$BROOT/srcdir/$PACKAGE-$VERSION"
 else
-	echo -e "\e[96mRun simple_unpack() from buildme file\e[0m"
-	simple_unpack
+	S="$BROOT"/srcdir
 fi
+
+echo -e "\e[96mDONE \e[0m"
 }
 
 add_environment(){
 
-add_variable CATEGORY PACKAGE VERSION BUILDME_FILE FAN BROOT S B D
+add_variable CATEGORY PACKAGE VERSION BUILDME_FILE FAN BROOT S B D raw_patch
 
 mkdir -p "$BROOT/varlog"
-cp /var/tmp/simple/bashrc "$BROOT/varlog/variables"
+cp -- /var/tmp/simple/bashrc "$BROOT/varlog/variables"
 print_variable >> "$BROOT/varlog/variables"
 }
 
-unpack_archives $1
-add_environment
+unpack_archives $1 || exit 1
+user_unpack || exit 1
+add_environment || exit 1
 #echo package $PACKAGE
