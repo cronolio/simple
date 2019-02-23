@@ -10,8 +10,8 @@
 ##### -- global -- ######
 regex1="([=<>]*)([-a-zA-Z]*)(/)([-_a-zA-Z0-9.]*)"
 regex2="([=<>]*)([-@_a-zA-Z0-9.]+)"
-regex3="([-_a-zA-Z0-9]+)(-)([0-9.]+[a-zA-Z0-9.]*)"
-regex4="([-_a-zA-Z0-9]+)(-)([0-9.]+[a-zA-Z0-9.]*)(.buildme)"
+regex3="([-_a-zA-Z0-9]+)(-)([0-9.]+[a-zA-Z0-9.]*)([_ptch]*)([0-9]*)"
+regex4="([-_a-zA-Z0-9]+)(-)([0-9.]+[a-zA-Z0-9.]*)([_ptch]*)([0-9]*)(.buildme)"
 regexBDEP='(BDEPEND=")([^"]*?)(")'
 regexSRC_URL='(SRC_URL=")([^"]*?)(")'
 regexMD5_SUM='(MD5_SUM=")([^"]*?)(")'
@@ -36,19 +36,20 @@ if [ $DEBUG ]; then echo -e "$@"; fi
 
 ################################################
 get_var_file() {
+#add "-p VARIABLE file/path" syntax to print specific variable
 if [ "$#" = "1" ]; then
 	file_path="$1"
 	if [ ! -f "$file_path" ]; then
 		echo "$file_path not a regular file"
-		exit 1
+		return 1
 	fi
 	if [ ! -r "$file_path" ]; then
 		echo "$file_path not readable"
-		exit 1
+		return 1
 	fi
 else
-	echo "use only one file as argument"
-	exit 1
+	echo "use only one file path as an argument"
+	return 1
 fi
 
 regex_var_content='([a-zA-Z_][a-zA-Z_0-9]*)(=")([^"]*?)(")([^ \t]*?)'
@@ -139,13 +140,13 @@ while read -r LINE; do
 	
 	if [[ "$LINE" =~ \$([a-zA-Z_][a-zA-Z_0-9]*)(.*) ]]; then
 		echo 'declaration like "$bar" does not supported. use "${bar}" instead'
-		exit 1
+		#return 1
 	fi
 
 	while [[ "$LINE" =~ \$(\{([a-zA-Z_][a-zA-Z_0-9]*)\})(.*) ]]; do
 		if [[ -z ${!BASH_REMATCH[2]} ]]; then
 			echo "$""${BASH_REMATCH[1]} is not definded"
-			exit 1
+		#	return 1
 		fi
 		NEW_LINE+="${LINE%"$BASH_REMATCH"}${!BASH_REMATCH[2]}"
 		LINE=${BASH_REMATCH[3]}
@@ -244,7 +245,8 @@ parse_var=$1
 #run_search
 #echo "get_variables called from function ${FUNCNAME[1]}"
 
-if [[ ${FUNCNAME[1]} = search_in_categories || ${FUNCNAME[1]} = is_use_needed ]]; then
+#if [[ ${FUNCNAME[1]} = search_in_categories || ${FUNCNAME[1]} = is_use_needed ]]; then
+if [[ ${FUNCNAME[1]} = main || ${FUNCNAME[1]} = search_in_categories || ${FUNCNAME[1]} = is_use_needed ]]; then
 	if [[ $parse_var =~ $regex1 ]]; then
 		ver_modif="${BASH_REMATCH[1]}"
 		category="${BASH_REMATCH[2]}"
@@ -261,6 +263,8 @@ if [[ ${FUNCNAME[1]} = search_in_categories || ${FUNCNAME[1]} = is_use_needed ]]
 		package="${BASH_REMATCH[1]}"
 		ver_sep="${BASH_REMATCH[2]}"
 	    version="${BASH_REMATCH[3]}"
+		raw_patch="${BASH_REMATCH[4]}${BASH_REMATCH[5]}"
+		patch="${BASH_REMATCH[5]}"
 	else
 	    package="$raw_package"        
 	fi
@@ -277,6 +281,8 @@ if [[ ${FUNCNAME[1]} = get_dep || ${FUNCNAME[1]} = run_remove_files ]]; then
 		PACKAGE="${BASH_REMATCH[1]}"
 		ver_sep="${BASH_REMATCH[2]}"
 		VERSION="${BASH_REMATCH[3]}"
+		raw_patch="${BASH_REMATCH[4]}${BASH_REMATCH[5]}"
+		PATCH="${BASH_REMATCH[5]}"
 	else
 		PACKAGE=$raw_package
 	fi
@@ -293,6 +299,8 @@ if [[ ${FUNCNAME[1]} = fetch_files || ${FUNCNAME[1]} = setup_env || ${FUNCNAME[1
 		PACKAGE="${BASH_REMATCH[1]}"
 		ver_sep="${BASH_REMATCH[2]}"
 		VERSION="${BASH_REMATCH[3]}"
+		raw_patch="${BASH_REMATCH[4]}${BASH_REMATCH[5]}"
+		PATCH="${BASH_REMATCH[5]}"
 	else
 		PACKAGE=$raw_package
 	fi
@@ -304,8 +312,9 @@ fi
 #raw_package:        $raw_package
 #package:            $package
 #ver_sep:            $ver_sep
-#version:            $version"
-
+#version:            $version
+#raw_patch:          $raw_patch
+#patch:              $patch"
 }
 
 #######################################
@@ -496,9 +505,7 @@ mkfifo fifo_err
 if [ ! -f "$S/configure" ]; then
 	echo "configure file does not exist"
 	exit 1
-fi
-
-if [ ! -x "$S/configure" ]; then
+elif [ ! -x "$S/configure" ]; then
 	echo "configure file does not executable"
 	exit 1
 fi
@@ -539,7 +546,11 @@ if [ ! -f "Makefile" ]; then
 	exit 1
 fi
 
-make $MAKEFLAGS $@
+echo
+echo "make ${MAKEFLAGS} ${@}"
+echo
+
+make ${MAKEFLAGS} ${@}
 }
 
 ###################################
@@ -549,7 +560,7 @@ if [ ! -f "Makefile" ]; then
 	exit 1
 fi
 
-BROOT=$BROOT sandbox make $MAKEFLAGS DESTDIR=${D} $@
+BROOT=$BROOT sandbox make $MAKEFLAGS DESTDIR=${D} ${@}
 
 #BROOT=$BROOT sandbox printenv
 #$MAKEFLAGS DESTDIR=${D} $@
