@@ -18,13 +18,6 @@ for line in ** ; do
 		continue
 	fi
 
-	# hack for bash installation
-	if [ -e /"$line" ]; then
-		if [[ "$line" = 'bin/bash' ]]; then
-			rm -f -- /bin/bash
-		fi
-	fi
-
 	#http://sco.com/developers/gabi/latest/ch4.eheader.html
 	# not sure about  \0\0..
 	read -rN 17 byte <"$line"
@@ -54,6 +47,13 @@ for line in ** ; do
 
 			echo "elf_$abi /$line $(md5sum $line | cut -d ' ' -f1) ${ldd_result[@]}"
 			unset ldd_result byte abi regex_ldd
+			
+			# hack for bash installation
+			if [ "$line" = 'bin/bash' ]; then
+				if [ -e /"$line" ]; then
+					rm -f /bin/bash
+				fi
+			fi
 			continue
 		fi
 	fi
