@@ -4,12 +4,14 @@ show_help(){
 tabs -4
 cat << 'EOF'
 simple [options] package ...
-
 options:
-	-p, --pretendent	pretendent
-	-r, --remove		remove package
-	-d, --debug		show debug info
-	-h, --help		help (this message)
+	-p, --pretendent    pretendent
+	-r, --remove        remove package
+	-d, --debug         show debug info
+	-h, --help          help (this message)
+
+simple -b file
+	-b --belong        find installed package from a file
 EOF
 }
 
@@ -49,6 +51,21 @@ add_variable PATH ETC_DIR BUILDME_DIR DISTDIR SIMPLEBUILD_DIR
 add_variable CFLAGS CXXFLAGS CPPFLAGS LDFLAGS MAKEFLAGS STABILITY LINGUAS USE
 }
 
+find_package_from_file(){
+if [[ ${#@} != 1 ]]; then
+	echo "one argument required"
+	return 0
+else
+	cd /var/lib/pkg || { echo -e "\e[31m  * cd failed\e[0m" && return 1; }
+	rez=$(grep -r -F "/$@ ")
+	if [ -z "$rez" ]; then
+		echo "no package found"
+		return 0
+	fi
+	echo "$rez"
+fi
+}
+
 run_search(){
 BASH_ENV="$SIMPLEBUILD_DIR/bashrc" su simple -s /bin/bash /usr/lib/simple/search -- $@
 }
@@ -83,9 +100,22 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 
 	BASH_ENV="$SIMPLEBUILD_DIR/bashrc" su simple -s /bin/bash /usr/lib/simple/all_build -- $CPV -setup_env
 
-	# Checking if previous source is present and delete	
+	# Checking if previous source is present and delete
 	# DANGEROUS operation. Check if prefix of path is /var/tmp/simple to allow this
-	broot=$(grep BROOT $SIMPLEBUILD_DIR/bashrc | sed -nr 's/BROOT="([^"]*?)(")/\1/p')
+#	broot=$(grep BROOT $SIMPLEBUILD_DIR/bashrc | sed -nr 's/BROOT="([^"]*?)(")/\1/p')
+
+	unset broot
+	broot_regex='BROOT="([-\.~_a-zA-Z0-9${}/]+)"'
+	while read -r line; do
+		if [[ "$line" =~ $broot_regex* ]]; then
+			broot=${BASH_REMATCH[1]}
+		fi
+	done <"$SIMPLEBUILD_DIR/bashrc"
+
+	if [ -z "$broot" ]; then
+		echo "broot_regex failed"
+		return 1
+	fi
 
 	if [ -d "$broot" ]; then
 		path_regex="($SIMPLEBUILD_DIR)(/)([-a-zA-Z]+)(/)([-_a-zA-Z0-9.]+)"
@@ -99,15 +129,10 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 
 			echo -e "\e[96mDelete previous Source\e[0m"
 			rm -rf -- "$broot"
-			
-			category="${BASH_REMATCH[3]}"
 
-			if [ "$(ls -A "$SIMPLEBUILD_DIR/$category")" ]; then
-				echo -e "\e[96mCategory dir is not empty. Keep it\e[0m"
-			else
-				echo -e "\e[96mRemoving empty category directory $SIMPLEBUILD_DIR/$category\e[0m"
-				rmdir "$SIMPLEBUILD_DIR/$category"
-			fi
+			category="${BASH_REMATCH[3]}"
+			# remove direcory if empty
+			rmdir -- "$SIMPLEBUILD_DIR/$category" 2> /dev/null
 		else
 			echo 'path_regex for $BROOT failed'
 			return 1
@@ -138,29 +163,35 @@ if [ $# -gt 0 ]; then
 		if [[ "$i" =~ $regex_option ]]; then
 			if [[ "$i" != '--' ]]; then
 				good=false
-				if [[ "$i" = "-p" || "$i" = "--pretendent" ]]; then
+				if [[ "$i" = '-p' || "$i" = '--pretendent' ]]; then
 					good=true
 					PRETENDENT=true
 					add_variable PRETENDENT
 					option="$i $option"
 				fi
-				if [[ "$i" = "-d" || "$i" = "--debug" ]]; then
+				if [[ "$i" = '-d' || "$i" = '--debug' ]]; then
 					good=true
 					DEBUG=true
 					add_variable DEBUG
 					option="$i $option"
 				fi
-				if [[ "$i" = "-r" || "$i" = "--remove" ]]; then
+				if [[ "$i" = '-r' || "$i" = '--remove' ]]; then
 					good=true
 					REMOVE=true
 					add_variable REMOVE
 					option="$i $option"
 				fi
-				if [[ "$i" = "-h" || "$i" = "--help" ]]; then
+				if [[ "$i" = '-h' || "$i" = '--help' ]]; then
 					good=true
 					option="$i $option"
 					show_help
 					exit 0
+				fi
+				if [[ "$i" = '-b' || "$i" = '--belong' ]]; then
+					good=true
+					option="$i $option"
+					BELONG=true
+					add_variable BELONG
 				fi
 
 				#bad options
@@ -222,9 +253,9 @@ if [ $# -gt 0 ]; then
 
 	unset a myset argy argx isset
 	echo "all arg: $arg"
-	
+
 	if [ -z "$arg" ]; then
-		echo -e "\e[31mat least one package required\e[0m"
+		echo -e "\e[31mat least one argument required\e[0m"
 		exit 1
 	fi
 
@@ -232,8 +263,13 @@ if [ $# -gt 0 ]; then
 	print_variable > $SIMPLEBUILD_DIR/bashrc
 	chown simple:simple $SIMPLEBUILD_DIR/bashrc
 
+	if [ -v BELONG ]; then
+		find_package_from_file $arg || { echo -e "\e[31m  * find_package_from_file failed\e[0m" && exit 1; }
+		exit 0
+	fi
+
 	run_search $arg || { echo -e "\e[31m  * run_search failed\e[0m" && exit 1; }
-	
+
 	if [ -v PRETENDENT ]; then
 		run_show_pretendent || { echo -e "\e[31m  * run_show_pretendent failed\e[0m" && exit 1; }
 		exit 0
@@ -242,7 +278,7 @@ if [ $# -gt 0 ]; then
 		run_remove || { echo -e "\e[31m  * run_remove failed\e[0m" && exit 1; }
 		exit 0
 	fi
-	
+
 	run_fetch || { echo -e "\e[31m  * run_fetch failed\e[0m" && exit 1; }
 	run_all_build || { echo -e "\e[31m  * run_all_build failed\e[0m" && exit 1; }
 else
