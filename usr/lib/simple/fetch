@@ -1,16 +1,21 @@
 #!/bin/bash
 
+user_fetch(){
+if grep ^simple_fetch $BUILDME_FILE >/dev/null 2>&1; then
+	source $BUILDME_FILE
+	if type simple_fetch > /dev/null 2>&1; then
+		simple_fetch || return 1
+	fi
+fi
+}
+
+
 fetch_files(){
-
-source /usr/lib/simple/libsimple
-source $SIMPLEBUILD_DIR/bashrc
-cd $SIMPLEBUILD_DIR
-
 
 for CPV in ${USERLIST_TO_INSTALL[@]}; do
 	get_variables $CPV
 
-	BUILDME_FILE=$BUILDME_DIR/$CATEGORY/$PACKAGE/$PACKAGE-$VERSION.buildme
+	BUILDME_FILE=$BUILDME_DIR/$CATEGORY/$PACKAGE/$PACKAGE-$VERSION$raw_patch.buildme
 
 	if [[ $(cat $BUILDME_FILE) =~ $regexSRC_URL ]]; then
 		while read -r LINE; do
@@ -89,10 +94,18 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 	debug_message "\e[96mFile have  $FILE_SUM\e[0m"
 	debug_message "\e[96mCorrect is $ORIG_SUM\e[0m"
 
+	# to run on fetch phase from buildme
+	user_fetch || { echo -e "\e[31m  * user_fetch failed\e[0m" && return 1; }
+
+
 	unset FILE_SUM ORIG_SUM SRC_URL SRC_URL_RENAMED FILE_NAME
 	unset CATEGORY PACKAGE VERSION category package raw_package ver_modif ver_sep version
 
 done
 }
+
+source /usr/lib/simple/libsimple
+source $SIMPLEBUILD_DIR/bashrc
+cd $SIMPLEBUILD_DIR
 
 fetch_files || { echo -e "\e[31m  * fetch_files failed\e[0m" && exit 1; }
