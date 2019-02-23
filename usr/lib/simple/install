@@ -7,7 +7,7 @@ if ! type simple_install > /dev/null 2>&1
 	BROOT=$BROOT sandbox make DESTDIR=${D} install
 else
 	echo -e "\e[96mRun simple_install() from buildme file\e[0m"
-	simple_install
+	simple_install || return 1
 fi
 }
 
@@ -29,9 +29,7 @@ source /var/tmp/simple/bashrc
 cd $SIMPLEBUILD_DIR
 get_variables $CPV
 
-BROOT="$SIMPLEBUILD_DIR/$CATEGORY/$PACKAGE-$VERSION"
-
-BROOT="$SIMPLEBUILD_DIR/$CATEGORY/$PACKAGE-$VERSION"
+BROOT="$SIMPLEBUILD_DIR/$CATEGORY/$PACKAGE-$VERSION$raw_patch"
 source "$BROOT/varlog/variables"
 source "$BUILDME_FILE"
 cd "$B"
