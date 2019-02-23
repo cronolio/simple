@@ -7,9 +7,9 @@ cd $SIMPLEBUILD_DIR
 }
 
 remove_files(){
-echo -n -e "\e[96mRemoving $CATEGORY/$PACKAGE-$VERSION  \e[0m"
+echo -n -e "\e[96mRemoving $CATEGORY/$PACKAGE-$VERSION$raw_patch  \e[0m"
 
-if [ -f /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"/CONTENT ]; then
+if [ -f /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION$raw_patch"/CONTENT ]; then
 	content_regex=$'(dir|otr|elf_32|elf_64|sym) ([^ \f\n\r\t\v]+).*'
 	while read -r line; do
 		if [[ "$line" =~ $content_regex ]]; then
@@ -23,7 +23,7 @@ if [ -f /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"/CONTENT ]; then
 			echo "content regex failed"
 			return 1
 		fi
-	done </var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"/CONTENT
+	done </var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION$raw_patch"/CONTENT
 
 	fhs_dirs=$(grep '^[^#]' /usr/lib/simple/fhs_dirs)
 
@@ -46,7 +46,7 @@ if [ -f /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"/CONTENT ]; then
 		fi
 	done
 
-	rm -rf -- /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"
+	rm -rf -- /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION$raw_patch"
 	rmdir --  /var/lib/pkg/"$CATEGORY" 2> /dev/null
 
 	echo "Ok"
@@ -59,7 +59,7 @@ fi
 }
 
 run_post_remove(){
-BUILDME_FILE=$BUILDME_DIR/$CATEGORY/$PACKAGE/$PACKAGE-$VERSION.buildme
+BUILDME_FILE=$BUILDME_DIR/$CATEGORY/$PACKAGE/$PACKAGE-$VERSION$raw_patch.buildme
 source $BUILDME_FILE
 if type simple_post_remove > /dev/null 2>&1 ; then
 	echo -e "\e[96mRuning simple_post_remove\e[0m"
@@ -70,7 +70,9 @@ fi
 
 run_remove_files(){
 for CPV in $REMOVE_LIST; do
+#	echo "CPV: $CPV"
 	get_variables $CPV
+
 	remove_files || { echo -e "\e[31m  * remove_files failed\e[0m" && return 1; }
 	run_post_remove || { echo -e "\e[31m  * run_post_remove failed\e[0m" && return 1; }
 done
@@ -78,5 +80,4 @@ done
 
 setup_env || exit 1
 run_remove_files || exit 1
-
 
