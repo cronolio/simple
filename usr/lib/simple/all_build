@@ -18,12 +18,12 @@ cd $SIMPLEBUILD_DIR
 source /usr/lib/simple/libsimple
 get_variables $CPV
 
-BROOT="$SIMPLEBUILD_DIR/$CATEGORY/$PACKAGE-$VERSION"
+BROOT="$SIMPLEBUILD_DIR/$CATEGORY/$PACKAGE-$VERSION$raw_patch"
 S="$BROOT/srcdir"
-B="$BROOT/builddir/$PACKAGE-$VERSION"
+B="$BROOT/builddir/$PACKAGE-$VERSION$raw_patch"
 D="$BROOT/installed"
 
-export CATEGORY PACKAGE VERSION BROOT S B D MAKEFLAGS CFLAGS CXXFLAGS LDFLAGS
+export CATEGORY PACKAGE VERSION BROOT S B D MAKEFLAGS CFLAGS CXXFLAGS LDFLAGS raw_patch
 
 # to check if previous source unpacked and delete
 if [ -f "$SIMPLEBUILD_DIR/bashrc" ]; then
@@ -40,15 +40,15 @@ cd $SIMPLEBUILD_DIR
 source /usr/lib/simple/libsimple
 get_variables $CPV
 
-BROOT="$SIMPLEBUILD_DIR/$CATEGORY/$PACKAGE-$VERSION"
+BROOT="$SIMPLEBUILD_DIR/$CATEGORY/$PACKAGE-$VERSION$raw_patch"
 S="$BROOT/srcdir"
-B="$BROOT/builddir/$PACKAGE-$VERSION"
+B="$BROOT/builddir/$PACKAGE-$VERSION$raw_patch"
 D="$BROOT/installed"
 
-export CATEGORY PACKAGE VERSION BROOT S B D MAKEFLAGS CFLAGS CXXFLAGS LDFLAGS
+export CATEGORY PACKAGE VERSION BROOT S B D MAKEFLAGS CFLAGS CXXFLAGS LDFLAGS raw_patch
 
-/usr/lib/simple/unpack $1 || return 1
-#/usr/lib/simple/patch $1
+/usr/lib/simple/unpack "$1" || return 1
+/usr/lib/simple/patch "$1" || return 1
 /usr/lib/simple/setup || return 1
 /usr/lib/simple/compile || return 1
 }
