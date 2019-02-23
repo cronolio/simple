@@ -17,23 +17,21 @@ search_in_categories() {
 # some-category/p1_oauth2-0.63
 # category/go-sys
 # some-category/go-sys-20160729
-# differen-category/localshell-0.1_rev2sec3
+# differen-category/localshell-0.1_ptchN
+# ptchN - patch version
 # rev2 - revision of buildme
 # sev3 - security update
 
-cd "$SIMPLEBUILD_DIR"
-source "$SIMPLEBUILD_DIR"/bashrc
-source /usr/lib/simple/libsimple
-
-
 for arg in "$@"; do
 
-debug_message "argument to search is: $arg"
+#debug_message "argument to search is: $arg"
 
 get_variables "$arg"
 get_expression
 
 #ebany poisk
+
+#reading trusted categories from profile
 if [ -v category ]; then
 	debug_message "category known"
 	while read -r line; do
@@ -41,52 +39,56 @@ if [ -v category ]; then
 			CATEGORY="$line"
 		fi
 	done <"$BUILDME_DIR"/profiles/categories
-	unset line
+	unset line f filenames
 
-	if [[ "$CATEGORY" = "$category" ]]; then
-		if [ "$REMOVE" = "true" ]; then
-			[ ! -d "/var/lib/pkg/$category" ] && echo "/var/lib/pkg/$category not a directory" && return 1
-			shopt -s nullglob extglob
-			pushd "/var/lib/pkg/$category" > /dev/null 2>&1 || return 1
-			for d in *; do
-				if [[ -d "$d" && "$d" = "$package"* ]]; then
-					# with whitespace!!!
-					filenames+="$category/$d "
-				fi
-				unset d
-			done
-			shopt -u nullglob extglob
-			popd > /dev/null 2>&1 || return 1
-		else
-			[ ! -d "$BUILDME_DIR/$category/$package" ] && echo "$BUILDME_DIR/$category/$package not a directory" && return 1
-			shopt -s nullglob extglob
-			pushd "$BUILDME_DIR/$category/$package" > /dev/null 2>&1 || return 1
-			for f in *; do
-				if [[ -f "$f" && "$f" = *'.buildme' ]]; then
-					# with whitespace!!!
-					filenames+="$f "
-				fi
-				unset f
-			done
-			shopt -u nullglob extglob
-			popd > /dev/null 2>&1 || return 1
-		fi
+	[[ "$CATEGORY" = "$category" ]] || { echo -e "\e[31m * Category $category does not exist\e[0m" && return 1; }
 
-		if [ -z "$filenames" ]; then
-			if [ "$REMOVE" = 'true' ]; then
-				echo "Category is definded but no matched directory in /var/lib/pkg/$category is not found"
-			else
-				echo "Category is definded but no any file in $BUILDME_DIR/$category/$package is not found"
-			fi
+	if [ "$REMOVE" = "true" ]; then
+		if [ ! -d "/var/lib/pkg/$category" ]; then
+			echo "/var/lib/pkg/$category not a directory"
 			return 1
 		fi
+		shopt -s nullglob extglob
+		pushd "/var/lib/pkg/$category" > /dev/null 2>&1 || return 1
+		for d in *; do
+			if [[ -d "$d" && "$d" = "$package"* ]]; then
+				# with whitespace!!!
+				filenames+="$category/$d "
+			fi
+			unset d
+		done
+		shopt -u nullglob extglob
+		popd > /dev/null 2>&1 || return 1
 
-		debug_message "list after search:"
-		debug_message "$filenames"
 	else
-		echo "Category $category does not exist"
+		if [ ! -d "$BUILDME_DIR/$category/$package" ]; then
+			echo "$BUILDME_DIR/$category/$package not a directory"
+			return 1
+		fi
+		shopt -s nullglob extglob
+		pushd "$BUILDME_DIR/$category/$package" > /dev/null 2>&1 || return 1
+		for f in *; do
+			if [[ -f "$f" && "$f" = *'.buildme' ]]; then
+				# with whitespace!!!
+				filenames+="$f "
+			fi
+			unset f
+		done
+		shopt -u nullglob extglob
+		popd > /dev/null 2>&1 || return 1
+	fi
+
+	if [ -z "$filenames" ]; then
+		if [ "$REMOVE" = 'true' ]; then
+			echo "Category is definded but no matched directory in /var/lib/pkg/$category is not found"
+		else
+			echo "Category is definded but no any file in $BUILDME_DIR/$category/$package is not found"
+		fi
 		return 1
 	fi
+
+	debug_message "list after search:"
+	debug_message "$filenames"
 
 else
 	debug_message "category not known"
@@ -118,7 +120,6 @@ else
 		filenames="$found"
 
 	else
-
 		pushd "$BUILDME_DIR" > /dev/null 2>&1 || return 1
 		while read -r entry; do
 			if [ -d "$entry"/"$package" ]; then
@@ -169,7 +170,7 @@ else
 fi
 
 #if required only specific version
-if [ ! -z "$ver_modif" ]; then
+if [[ -n "$ver_modif" ]]; then
 	for F in $filenames; do
 		debug_message "F: $F"
 		if [ "$REMOVE" = "true" ]; then
@@ -206,9 +207,26 @@ debug_message "sorted by version: $sortedbyversion"
 if [ "$REMOVE" = "true" ]; then
 	REMOVE_LIST+="$sortedbyversion "
 else
+	unset sortedbystability
 	for F in $sortedbyversion; do
 		debug_message "F: $F"
-		var_stability=$(grep STABILITY "$BUILDME_DIR/$category/$package/$F" | sed -nr 's/STABILITY="([~_a-zA-Z0-9${} ]*)".*/\1/p')
+
+		# find var_stability in buildme file
+		unset var_stability
+		stab_regex='STABILITY="([~_a-zA-Z0-9${} ]+)"'
+		while read -r line; do
+			if [[ "$line" =~ $stab_regex* ]]; then
+				var_stability=${BASH_REMATCH[1]}
+			fi
+		done <"$BUILDME_DIR/$category/$package/$F"
+
+		if [ -z "$var_stability" ]; then
+			echo "stab_regex failed"
+			return 1
+		fi
+
+		unset stab_regex
+
 		make_stability=$STABILITY
 
 		debug_message "var stability: $var_stability"
@@ -226,82 +244,124 @@ else
 	#checking for more new package
 	# will delete all versions if REMOVE and no version definded
 
+	unset sortedbymaxverion
 	for I in $sortedbystability; do
 		debug_message "I: $I"
-		max=0
+		maxver=0
 
 		if [[ "$I" =~ $regex4 ]]; then
-			if [[ "${BASH_REMATCH[3]}" > "$max" ]]; then
-				max="${BASH_REMATCH[3]}"
+			if [[ "${BASH_REMATCH[3]}" > "$maxver" ]]; then
+				maxver="${BASH_REMATCH[3]}"
 			fi
+		else
+			echo regex4 failed
+			return 1
 		fi
-		debug_message "max: $max"
+		debug_message "maxver: $maxver"
 	done
 
-	if [ "$max" = 0 ]; then
-		echo "no mached version found"
+	if [ "$maxver" = 0 ]; then
+		echo "no package version found"
 		return 1
+	else
+		for v in $sortedbystability; do
+			if [[ "$v" = *"$package-$maxver"* ]]; then
+				sortedbymaxverion+="$v "
+			fi
+		done
+	fi
+
+	debug_message "sortedbymaxverion: $sortedbymaxverion"
+
+
+	for ptch in $sortedbymaxverion; do
+		debug_message "ptch: $ptch"
+        maxpatch=0
+
+        if [[ "$ptch" =~ $regex4 ]]; then
+            if [[ "${BASH_REMATCH[5]}" > "$maxpatch" ]]; then
+                maxpatch="${BASH_REMATCH[5]}"
+            fi
+        fi
+        debug_message "maxpatch: $maxpatch"
+    done
+
+    if [ "$maxpatch" = 0 ]; then
+        debug_message "no patch version found"
+		unset raw_patch
+	else
+		raw_patch="_ptch$maxpatch"
 	fi
 
 	CATEGORY=$category
 	PACKAGE=$package
-	VERSION=$max
+	VERSION=$maxver
+
 
 ######################################################
 	# checking if package is installed
-	if [ -d /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION" ]; then
+	if [ -d /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION$raw_patch" ]; then
 		# if package and version the same then the package is installed
 		debug_message "package with the same version already installed"
 
 		#check if package already in list
 		alreadylisted=no
 		for p in $INSTALLED_LIST; do
-			if [ "$CATEGORY/$PACKAGE-$VERSION" = $p ]; then
+			if [ "$CATEGORY/$PACKAGE-$VERSION$raw_patch" = "$p" ]; then
 				alreadylisted=yes
 			fi
 		done
-        	if [ $alreadylisted = no ]; then
-			INSTALLED_LIST+="$CATEGORY/$PACKAGE-$VERSION "
+
+       	if [ $alreadylisted = no ]; then
+			INSTALLED_LIST+="$CATEGORY/$PACKAGE-$VERSION$raw_patch "
 		fi
 		unset alreadylisted
 	else
 		#checking if some version of this package is installed
 		shopt -s nullglob
 		for d in /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-* ; do
-			debug_message "installed $d package with another version"
+			echo "installed $d package with another version"
 		done
 		shopt -u nullglob
 
 		if [ -v d ]; then
 			echo "installed $d package with another version"
 			echo "update case"
-			echo "not implemented yet"
+			echo "not implemented yet. exiting.."
 			return 1
 		fi
 	fi
 #######################################################
 
 	if [ "$look_for_dep" = "yes" ]; then
-		DEP="$CATEGORY/$PACKAGE-$VERSION"
+		DEP="$CATEGORY/$PACKAGE-$VERSION$raw_patch"
 		#add_variable DEP
 	else
 		if [ -z $USERLIST_TO_INSTALL ]; then
-			USERLIST_TO_INSTALL="$CATEGORY/$PACKAGE-$VERSION"
+			USERLIST_TO_INSTALL="$CATEGORY/$PACKAGE-$VERSION$raw_patch"
 		else
-			NEWLIST=(${USERLIST_TO_INSTALL[@]} "$CATEGORY/$PACKAGE-$VERSION")
-			USERLIST_TO_INSTALL=(${NEWLIST[@]})
+			#check if package already in list
+			for pkg in ${USERLIST_TO_INSTALL[@]}; do
+                if [[ "$pkg" != "$CATEGORY/$PACKAGE-$VERSION$raw_patch" ]]; then
+                    tmp_list+=($pkg)
+                fi
+            done
+
+			#now add the package left than all other
+            USERLIST_TO_INSTALL=("$CATEGORY/$PACKAGE-$VERSION$raw_patch" ${tmp_list[@]})
+			unset pkg tmp_list
 		fi
 		#echo ===================================
-		#echo "list to install from search: ${USERLIST_TO_INSTALL[@]}"
+		#echo "list to install: ${USERLIST_TO_INSTALL[@]}"
 	fi
 
 # end of REMOVE
 fi
 
-unset CATEGORY PACKAGE VERSION
+#unset CATEGORY PACKAGE VERSION raw_patch
 unset same_version less_version more_version
-unset CP category package raw_package separator ver_modif ver_sep version
-unset count found max d F I S filenames var_stability make_stability sortedbystability sortedbyversion
+unset CP CPV category package raw_package separator ver_modif ver_sep version maxpatch ptch
+unset count found max p v d F I S filenames var_stability make_stability sortedbystability sortedbymaxverion
 
 #show all variables
 # ( set -o posix ; set )
@@ -314,115 +374,132 @@ done
 
 get_dep(){
 unset look
-if [[ $look_for_dep = yes ]]; then
-	look=$DEP
-else
-	look=${USERLIST_TO_INSTALL[@]}
-fi
 
-for CPV in $look; do
-	debug_message "CPV $CPV"
-	get_variables $CPV
+if [[ $(cat "$BUILDME_DIR/$CATEGORY/$PACKAGE/$PACKAGE-$VERSION$raw_patch.buildme") =~ $regexBDEP ]]; then
+	bdep_line=${BASH_REMATCH[2]}
 
-	if [[ $(cat "$BUILDME_DIR/$CATEGORY/$PACKAGE/$PACKAGE-$VERSION.buildme") =~ $regexBDEP ]]; then
-		bdep_line=$(echo "${BASH_REMATCH[2]}" | tr -s [:space:] ' ')
-		debug_message "bdep_line ${bdep_line[@]}"
-		if [[ "$bdep_line" = ' ' ]]; then
-			debug_message "bdep_line is definded but empty"
-		else
-			count=0
-			for b in ${bdep_line[@]}; do
-				if [[ $b =~ $check_use ]]; then
-					debug_message "USE: ${BASH_REMATCH[1]}"
+	LINE=${BASH_REMATCH[2]}
+	# trim extra whitespaces from the line
+	shopt -s extglob # enable extended pattern matching
+	LINE="${LINE//+([[:space:]])/ }"
+	LINE="${LINE#"${LINE%%[![:space:]]*}"}"
+	LINE="${LINE%"${LINE##*[![:space:]]}"}"
+	shopt -u extglob
+	bdep_line="$LINE"
+	unset LINE
+	debug_message "bdep_line ${bdep_line[@]}"
 
-					count=$((count + 1))
-					if [[ $(is_use_needed "${BASH_REMATCH[1]}") = true ]]; then
-						debug_message "use needed"
-						needed=true
-					else
-						debug_message "use NOT needed"
-						needed=false
-					fi
+	if [[ "$bdep_line" = ' ' ]]; then
+		debug_message "bdep_line is definded but empty"
+	else
+		count=0
+		for b in ${bdep_line[@]}; do
+			if [[ $b =~ $check_use ]]; then
+				debug_message "USE: ${BASH_REMATCH[1]}"
+
+				count=$((count + 1))
+				if [[ $(is_use_needed "${BASH_REMATCH[1]}") = true ]]; then
+					debug_message "use needed"
+					needed=true
 				else
-					if [[ $count -gt 0 ]]; then
-						if [[ $b != "(" && $b != ")" && $needed = true ]]; then
-							bdep="$bdep $b"
-						fi
-					fi
+					debug_message "use NOT needed"
+					needed=false
 				fi
-				if [[ $b = ")" ]]; then
-					count=$((count - 1))
-				fi
-				if [[ $count = 0 ]]; then
-					if [[ $b != "(" && $b != ")" ]]; then
+			else
+				if [[ $count -gt 0 ]]; then
+					if [[ $b != "(" && $b != ")" && $needed = true ]]; then
 						bdep="$bdep $b"
 					fi
 				fi
-			done
-		fi
-	else
-		debug_message "BDEPEND is not definded"
-
+			fi
+			if [[ $b = ")" ]]; then
+				count=$((count - 1))
+			fi
+			if [[ $count = 0 ]]; then
+				if [[ $b != "(" && $b != ")" ]]; then
+					bdep="$bdep $b"
+				fi
+			fi
+		done
 	fi
+else
+	debug_message "BDEPEND is not definded"
+fi
 
 BDEP=("$bdep")
 unset needed count b bdep bdep_line category package raw_package ver_modif ver_sep version
 
 #################################################
 
-	for dep in ${BDEP[@]}; do
-		look_for_dep=yes
-		search_in_categories "$dep"
+for dep in ${BDEP[@]}; do
+	look_for_dep=yes
+	search_in_categories "$dep" || return 1
 
-		count=0
-		for pack in ${USERLIST_TO_INSTALL[@]}; do
-			if [[ "$pack" != "$DEP" ]]; then
-				count=$((count + 1))
+	count=0
+	for pack in ${USERLIST_TO_INSTALL[@]}; do
+		if [[ "$pack" != "$DEP" ]]; then
+			count=$((count + 1))
+		fi
+	done
+
+	if [[ "$count" = "${#USERLIST_TO_INSTALL[*]}" ]]; then
+		debug_message "new dependency $DEP"
+
+		USERLIST_TO_INSTALL=("$DEP" "${USERLIST_TO_INSTALL[@]}")
+		debug_message "list after adding ${USERLIST_TO_INSTALL[@]}"
+
+		get_dep || return 1
+
+	else
+		debug_message "$DEP should be before $CPV"
+
+		# removing from the list and adding again
+		for pkg in ${USERLIST_TO_INSTALL[@]}; do
+			if [[ "$pkg" != "$DEP" ]]; then
+				tmp_list+=($pkg)
 			fi
 		done
 
-		if [[ "$count" = "${#USERLIST_TO_INSTALL[*]}" ]]; then
-			debug_message "new dependency $DEP"
+		USERLIST_TO_INSTALL=($DEP ${tmp_list[@]})
 
-			USERLIST_TO_INSTALL=("$DEP" "${USERLIST_TO_INSTALL[@]}")
-			debug_message "list after adding ${USERLIST_TO_INSTALL[@]}"
+		unset tmp_list pkg
 
-			get_dep
+		debug_message "list after moving ${USERLIST_TO_INSTALL[@]}"
 
-		else
-			debug_message "$DEP should be before $CPV"
-
-			USERLIST_TO_INSTALL=($(echo ${USERLIST_TO_INSTALL[@]} | sed -r "s,$DEP,,g"))
-			USERLIST_TO_INSTALL=($DEP ${USERLIST_TO_INSTALL[@]})
-			debug_message "list after moving ${USERLIST_TO_INSTALL[@]}"
-
-			get_dep
-		fi
-
-	done
-
-	look_for_dep=no
-	unset DEP CATEGORY PACKAGE VERSION BDEP pack count category package raw_package ver_modif ver_sep version
+		get_dep || return 1
+	fi
 
 done
+
+look_for_dep=no
+unset DEP CATEGORY PACKAGE VERSION BDEP pack count category package raw_package ver_modif ver_sep version
 
 }
 ################################################################################
 
-search_in_categories $@ || exit 1
+
+cd "$SIMPLEBUILD_DIR"
+source "$SIMPLEBUILD_DIR"/bashrc
+source /usr/lib/simple/libsimple
+
+for arg in "$@"; do
+	search_in_categories "$arg" || exit 1
+
+	if [[ "$REMOVE" != "true" ]]; then
+		get_dep || exit 1
+	fi
+done
 
 if [ "$REMOVE" = "true" ]; then
 	add_variable REMOVE_LIST
-	print_variable >> "$SIMPLEBUILD_DIR/bashrc"
-	exit 0
+else
+	add_variable USERLIST_TO_INSTALL
 fi
-
-get_dep || exit 1
 
 if [ -v INSTALLED_LIST ]; then
 	add_variable INSTALLED_LIST
 fi
 
-add_variable USERLIST_TO_INSTALL
 print_variable >> "$SIMPLEBUILD_DIR/bashrc"
 
+exit 0
