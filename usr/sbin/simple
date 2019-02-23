@@ -11,7 +11,7 @@ options:
 	-h, --help          help (this message)
 
 simple -b file
-	-b --belong        find installed package from a file
+	-b --belong        find to which installed package belong a file
 EOF
 }
 
