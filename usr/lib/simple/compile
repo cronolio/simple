@@ -8,7 +8,7 @@ if ! type simple_compile > /dev/null 2>&1
 	return 1
 else
 	echo -e "\e[96mRun simple_compile() from buildme file\e[0m"
-	simple_compile
+	simple_compile || return 1
 fi
 
 }
@@ -18,4 +18,4 @@ source /usr/lib/simple/libsimple
 source "$BROOT/varlog/variables"
 source /var/tmp/simple/bashrc
 source "$BUILDME_FILE"
-compile_source
+compile_source || exit 1
