@@ -9,7 +9,7 @@ if ! type simple_setup > /dev/null 2>&1
 	return 1
 else
 	echo -e "\e[96mRun simple_setup() from buildme file\e[0m"
-	simple_setup
+	simple_setup || return 1
 fi
 
 }
