@@ -11,11 +11,18 @@ for line in ** ; do
 		echo "dir /$line"
 		continue
 	elif [ -L "$line" ]; then
-		if [ -L /"$line" ]; then
+		if [ -e /"$line" ]; then
 			exist+=("$line")
 		fi
 		echo "sym /$line -> $(readlink $line)"
 		continue
+	fi
+
+	# hack for bash installation
+	if [ -e /"$line" ]; then
+		if [[ "$line" = 'bin/bash' ]]; then
+			rm -f -- /bin/bash
+		fi
 	fi
 
 	#http://sco.com/developers/gabi/latest/ch4.eheader.html
@@ -33,34 +40,43 @@ for line in ** ; do
 			while read -r ldd_line; do
 				if [[ "$ldd_line" =~ $regex_ldd ]]; then
 					if [[ "${BASH_REMATCH[1]}" = 'statically' || "${BASH_REMATCH[1]}" = 'not' ]]; then
-						ldd_result+=(static)					
+						ldd_result+=(static)
 					elif [ "${BASH_REMATCH[1]}" != linux-vdso.so.1 ]; then
 						ldd_result+=(${BASH_REMATCH[1]})
 					fi
 				fi
 			done < <(if [[ "$PACKAGE" = glibc && ! -f /lib64/ld-linux-x86-64.so.2 ]]; then
-					#case while no glibc. it will use fresh compiled ld
-					lib/ld-linux-x86-64.so.2 --list "$line" 2> /dev/null | sed -r -e 's#/tools##' -e 's#/lib/#/lib6 4/#'
-				else
-					ldd "$line" 2> /dev/null
-				fi)
+						#case while no glibc. it will use fresh compiled ld
+						lib/ld-linux-x86-64.so.2 --list "$line" 2> /dev/null | sed -r -e 's#/tools##' -e 's#/lib/#/lib64/#'
+					else
+						ldd "$line" 2> /dev/null
+					fi)
 
 			echo "elf_$abi /$line $(md5sum $line | cut -d ' ' -f1) ${ldd_result[@]}"
-			unset ldd_result byte abi
+			unset ldd_result byte abi regex_ldd
 			continue
 		fi
 	fi
-	
+
 	#we will create this file later on real system (with all other files)
 	if [ "$line" = "usr/share/info/dir" ]; then
+		# set some variable to trigerly run comand in post install
 		continue
 	fi
-	
-	echo "otr /$line $(md5sum $line | cut -d ' ' -f1)"
-	
+
+	#perl internal documentation
+	#this file used by multiple perl software
+	#usr/lib/perl5/5.26.3/x86_64-linux-thread-multi/perllocal.pod
+	if [[ "$line" = *"perllocal.pod" ]]; then
+		# set some variable to trigerly run comand in post install
+		continue
+	fi
+
 	if [ -e /"$line" ]; then
 		exist+=("$line")
 	fi
+
+	echo "otr /$line $(md5sum $line | cut -d ' ' -f1)"
 
 done > "$BROOT"/CONTENT
 shopt -u globstar nullglob
@@ -80,13 +96,21 @@ if [ -f ${D}/usr/share/info/dir ]; then
 	echo "write a trigger to readd all info files on real system"
 	echo 'like "pushd /usr/share/info; rm -v dir; for f in *; do; install-info $f dir 2>/dev/null; done; popd"'
 fi
+
+# add magic for not depend on version
+if [ -f ${D}/usr/lib/perl5/5.26.3/x86_64-linux-thread-multi/perllocal.pod ]; then
+	echo "perllocal.pod hack"
+	echo >> /usr/lib/perl5/5.26.3/x86_64-linux-thread-multi/perllocal.pod
+	cat ${D}/usr/lib/perl5/5.26.3/x86_64-linux-thread-multi/perllocal.pod >> /usr/lib/perl5/5.26.3/x86_64-linux-thread-multi/perllocal.pod
+	rm ${D}/usr/lib/perl5/5.26.3/x86_64-linux-thread-multi/perllocal.pod
+fi
 }
 
 run_merge(){
 # copy content list
-if [ ! -d /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION" ]; then
-	mkdir -p /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION" || return 1
-	cp "$BROOT"/CONTENT /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"/
+if [ ! -d /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION$raw_patch" ]; then
+	mkdir -p /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION$raw_patch" || return 1
+	cp "$BROOT"/CONTENT /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION$raw_patch"/
 else
 	echo content not copyed
 	return 1
@@ -95,9 +119,10 @@ fi
 # copy all files to real system
 cp -r --preserve=all * / || return 1
 
+# special behaviour installing
 if [[ "$PACKAGE" = glibc ]]; then
 	get_content
-	cp -f "$BROOT"/CONTENT /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION"/
+	cp -f "$BROOT"/CONTENT /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION$raw_patch"/
 fi
 
 # remove work direcory and category if empty
@@ -115,15 +140,13 @@ source /var/tmp/simple/bashrc
 cd $SIMPLEBUILD_DIR
 get_variables $CPV
 
-BROOT="$SIMPLEBUILD_DIR/$CATEGORY/$PACKAGE-$VERSION"
+BROOT="$SIMPLEBUILD_DIR/$CATEGORY/$PACKAGE-$VERSION$raw_patch"
 S="$BROOT/srcdir"
-B="$BROOT/builddir/$PACKAGE-$VERSION"
+B="$BROOT/builddir/$PACKAGE-$VERSION$raw_patch"
 D="$BROOT/installed"
 
 export CATEGORY PACKAGE VERSION BROOT S B D
 
-
-cd "$B"
 source "$BROOT/varlog/variables"
 source "$BUILDME_FILE"
 
@@ -131,15 +154,13 @@ echo -e "\e[96mRunning merge  \e[0m"
 cd "$D" || return 1
 
 # check if software alredy installed
-if [ -d /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION" ]; then
-	echo "/var/lib/$CATEGORY/$PACKAGE-$VERSION already exist"
-	return 1
+if [ -d /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION$raw_patch" ]; then
+    echo "/var/lib/$CATEGORY/$PACKAGE-$VERSION$raw_patch already exist"
+    return 1
 fi
 }
-
 
 setup_env $1 || exit 1
 get_content || { echo -e "\e[31m  * get_content failed\e[0m" && exit 1; }
 otk_checks || { echo -e "\e[31m  * otk_checks failed\e[0m" && exit 1; }
 run_merge || { echo -e "\e[31m  * run_merge failed\e[0m" && exit 1; }
-
