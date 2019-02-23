@@ -1,0 +1,27 @@
+#!/bin/bash
+
+patch_files(){
+if ! type simple_patch > /dev/null 2>&1; then
+	echo -e "\e[96msimple_patch() is not definded in buildme file. No default yet"
+else
+	echo -e "\e[96mRun simple_patch() from buildme file\e[0m"
+	simple_patch
+fi
+}
+
+setup_env(){
+CPV=$1
+source /usr/lib/simple/libsimple
+source /var/tmp/simple/bashrc
+cd $SIMPLEBUILD_DIR
+get_variables $CPV
+
+BROOT="$SIMPLEBUILD_DIR/$CATEGORY/$PACKAGE-$VERSION$raw_patch"
+source "$BROOT/varlog/variables"
+source "$BUILDME_FILE"
+cd "$S"
+export CATEGORY PACKAGE VERSION BROOT S B D raw_patch
+}
+
+setup_env "$1" || exit 1
+patch_files "$1" || exit 1
