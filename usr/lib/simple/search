@@ -312,7 +312,7 @@ else
 			fi
 		done
 
-       	if [ $alreadylisted = no ]; then
+		if [ $alreadylisted = no ]; then
 			INSTALLED_LIST+="$CATEGORY/$PACKAGE-$VERSION$raw_patch "
 		fi
 		unset alreadylisted
