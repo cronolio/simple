@@ -342,13 +342,13 @@ else
 		else
 			#check if package already in list
 			for pkg in ${USERLIST_TO_INSTALL[@]}; do
-                if [[ "$pkg" != "$CATEGORY/$PACKAGE-$VERSION$raw_patch" ]]; then
-                    tmp_list+=($pkg)
-                fi
-            done
+                        	if [[ "$pkg" != "$CATEGORY/$PACKAGE-$VERSION$raw_patch" ]]; then
+					tmp_list+=($pkg)
+				fi
+			done
 
 			#now add the package left than all other
-            USERLIST_TO_INSTALL=("$CATEGORY/$PACKAGE-$VERSION$raw_patch" ${tmp_list[@]})
+			USERLIST_TO_INSTALL=("$CATEGORY/$PACKAGE-$VERSION$raw_patch" ${tmp_list[@]})
 			unset pkg tmp_list
 		fi
 		#echo ===================================
