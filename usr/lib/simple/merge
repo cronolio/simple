@@ -54,7 +54,7 @@ for line in ** ; do
 					rm -f /bin/bash
 				fi
 			fi
-			continue
+			#continue
 		fi
 	fi
 
