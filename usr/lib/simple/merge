@@ -54,7 +54,10 @@ for line in ** ; do
 					rm -f /bin/bash
 				fi
 			fi
-			#continue
+			if [ -e /"$line" ]; then
+				exist+=("$line")
+			fi
+			continue
 		fi
 	fi
 
