@@ -87,8 +87,7 @@ if [ -v category ]; then
 		return 1
 	fi
 
-	debug_message "list after search:"
-	debug_message "$filenames"
+	debug_message "list after search: ${filenames}"
 
 else
 	debug_message "category not known"
@@ -99,14 +98,14 @@ else
 		while read -r entry; do
 			for d in **; do
 				if [[ -d "$d" && "$d" = "$entry"/"$package"* ]]; then
-					CPV+="$d " && count=$((count + 1))
+					CPV+="$d " && let count=$count+1
 				fi
 			done
 		done <"$BUILDME_DIR"/profiles/categories
 		popd > /dev/null 2>&1 || return 1
 		shopt -u nullglob extglob globstar
 
-		found=$(echo -e $CPV) #eat whitespace
+		found=$(echo -e "$CPV") #eat whitespace
 
 		if [ -z "$found" ]; then
 			if [ "$REMOVE" = 'true' ]; then
@@ -123,14 +122,14 @@ else
 		pushd "$BUILDME_DIR" > /dev/null 2>&1 || return 1
 		while read -r entry; do
 			if [ -d "$entry"/"$package" ]; then
-				found+="$entry/$package " && count=$((count + 1))
+				found+="$entry/$package " && let count=$count+1
 			fi
 		done <"$BUILDME_DIR"/profiles/categories
 		popd > /dev/null 2>&1 || return 1
 
 		found=$(echo -e $found) #eat whitespace
 
-		if [ "$count" -gt "1" ]; then
+		if [[ "$count" -gt 1 ]]; then
 			echo -n 'Sorry, we found many packages. Try to use '
 			echo "$found"
 			return 1
@@ -165,8 +164,7 @@ else
 
 	fi
 
-	debug_message "list after search:"
-	debug_message "$filenames"
+	debug_message "list after search: ${filenames}"
 fi
 
 #if required only specific version
@@ -342,7 +340,7 @@ else
 		else
 			#check if package already in list
 			for pkg in ${USERLIST_TO_INSTALL[@]}; do
-                        	if [[ "$pkg" != "$CATEGORY/$PACKAGE-$VERSION$raw_patch" ]]; then
+				if [[ "$pkg" != "$CATEGORY/$PACKAGE-$VERSION$raw_patch" ]]; then
 					tmp_list+=($pkg)
 				fi
 			done
@@ -375,10 +373,13 @@ done
 get_dep(){
 unset look
 
-if [[ $(cat "$BUILDME_DIR/$CATEGORY/$PACKAGE/$PACKAGE-$VERSION$raw_patch.buildme") =~ $regexBDEP ]]; then
-	bdep_line=${BASH_REMATCH[2]}
-
+if [[ $(<"$BUILDME_DIR/$CATEGORY/$PACKAGE/$PACKAGE-$VERSION$raw_patch.buildme") =~ $regexBDEP ]]; then
 	LINE=${BASH_REMATCH[2]}
+fi
+
+if [ -z "$LINE" ]; then
+	debug_message "BDEPEND is not definded"
+else
 	# trim extra whitespaces from the line
 	shopt -s extglob # enable extended pattern matching
 	LINE="${LINE//+([[:space:]])/ }"
@@ -396,8 +397,7 @@ if [[ $(cat "$BUILDME_DIR/$CATEGORY/$PACKAGE/$PACKAGE-$VERSION$raw_patch.buildme
 		for b in ${bdep_line[@]}; do
 			if [[ $b =~ $check_use ]]; then
 				debug_message "USE: ${BASH_REMATCH[1]}"
-
-				count=$((count + 1))
+				let count=$count+1
 				if [[ $(is_use_needed "${BASH_REMATCH[1]}") = true ]]; then
 					debug_message "use needed"
 					needed=true
@@ -413,7 +413,7 @@ if [[ $(cat "$BUILDME_DIR/$CATEGORY/$PACKAGE/$PACKAGE-$VERSION$raw_patch.buildme
 				fi
 			fi
 			if [[ $b = ")" ]]; then
-				count=$((count - 1))
+				let count=$count-1
 			fi
 			if [[ $count = 0 ]]; then
 				if [[ $b != "(" && $b != ")" ]]; then
@@ -422,8 +422,6 @@ if [[ $(cat "$BUILDME_DIR/$CATEGORY/$PACKAGE/$PACKAGE-$VERSION$raw_patch.buildme
 			fi
 		done
 	fi
-else
-	debug_message "BDEPEND is not definded"
 fi
 
 BDEP=("$bdep")
@@ -438,7 +436,7 @@ for dep in ${BDEP[@]}; do
 	count=0
 	for pack in ${USERLIST_TO_INSTALL[@]}; do
 		if [[ "$pack" != "$DEP" ]]; then
-			count=$((count + 1))
+			let count=$count+1
 		fi
 	done
 
