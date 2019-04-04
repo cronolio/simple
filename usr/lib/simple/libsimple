@@ -165,7 +165,7 @@ unset in_2quotes in_1quotes multiline LINE old_LINE new_LINE NEW_LINE prev_symbo
 delete_variable(){
 for v in "$@"; do
 	while read line_var; do
-		if [[ $line_var =~ $regex ]]; then
+		if [[ "$line_var" =~ $regex ]]; then
 			name_var="${BASH_REMATCH[1]}"
 		fi
 
@@ -209,7 +209,7 @@ for v in "$@"; do
 			if [[ "$entry_env" != "$entry_var" || "$delim_env1" != "$delim_var1" || "$delim_env2" != "$delim_var2" ]]; then
 				delete_variable $v
 			else
-				count=$(($count + 1))	
+				let count=$count+1	
 			fi
 		fi
 	
@@ -319,16 +319,16 @@ fi
 
 #######################################
 get_expression(){
-if [[ ! -z "$ver_modif" || ! -z "$version" ]]; then
-	if [[ ! -z $ver_modif && ! -z $version ]]; then
-		if [ ${#ver_modif} -ge 4 ]; then
+if [[ -n "$ver_modif" || -n "$version" ]]; then
+	if [[ -n $ver_modif && -n $version ]]; then
+		if [[ ${#ver_modif} -ge 4 ]]; then
 			echo "ver_modif too long. current value $ver_modif"
 			exit 1				
 		fi
 
 		n=0
-		while [ $n -lt ${#ver_modif} ]; do
-			i=$(echo ${ver_modif:$n:1})
+		while [[ $n -lt ${#ver_modif} ]]; do
+			i=${ver_modif:$n:1}
 			if [ "$i" = "=" ]; then 
 				same_version='='
 			fi
@@ -338,7 +338,7 @@ if [[ ! -z "$ver_modif" || ! -z "$version" ]]; then
 			if [ "$i" = "<" ]; then
 				less_version='<'
 			fi
-			n=$((n + 1))
+			let n=$n+1
 		done
 		unset n i
 
@@ -384,13 +384,9 @@ unset cheks
 is_use_needed(){
 
 #checking make.conf
-if [[ $(cat "$ROOT_DIR/make.conf") =~ $regexUSE ]]; then
-	make_use_set=("${BASH_REMATCH[2]}")
-fi
-
 u=false
-if [ -n "${#make_use_set[@]}" ]; then
-	for i in "${make_use_set[@]}"; do
+if [ -n "${USE}" ]; then
+	for i in "${USE}"; do
 		if [ "$i" = "$1" ]; then
 			u=true
 		fi
@@ -400,10 +396,10 @@ if [ -n "${#make_use_set[@]}" ]; then
 	done
 fi
 
-unset make_use_set i
+unset i
 
 #checking package.use
-package_use_set=($(grep "$CATEGORY/$PACKAGE" "$ROOT_DIR/package.use"))
+package_use_set=($(grep "$CATEGORY/$PACKAGE" "$ETC_DIR/package.use" 2>/dev/null))
 if [ -n "${#package_use_set[@]}" ]; then
 	get_variables ${package_use_set[0]}
 	if [ -n "$version" ]; then
