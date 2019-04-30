@@ -359,7 +359,8 @@ fi
 #unset CATEGORY PACKAGE VERSION raw_patch
 unset same_version less_version more_version
 unset CP CPV category package raw_package separator ver_modif ver_sep version maxpatch ptch
-unset count found max p v d F I S filenames var_stability make_stability sortedbystability sortedbymaxverion
+unset count found max p v d F I S filenames var_stability make_stability 
+unset sortedbyversion sortedbystability sortedbymaxverion
 
 #show all variables
 # ( set -o posix ; set )
