@@ -23,7 +23,7 @@ S="$BROOT/srcdir"
 B="$BROOT/builddir/$PACKAGE-$VERSION$raw_patch"
 D="$BROOT/installed"
 
-export CATEGORY PACKAGE VERSION BROOT S B D MAKEFLAGS CFLAGS CXXFLAGS LDFLAGS raw_patch
+export CATEGORY PACKAGE VERSION BROOT S B D MAKEFLAGS CFLAGS CXXFLAGS LDFLAGS LINGUAS raw_patch
 
 # to check if previous source unpacked and delete
 if [ -f "$SIMPLEBUILD_DIR/bashrc" ]; then
@@ -45,7 +45,7 @@ S="$BROOT/srcdir"
 B="$BROOT/builddir/$PACKAGE-$VERSION$raw_patch"
 D="$BROOT/installed"
 
-export CATEGORY PACKAGE VERSION BROOT S B D MAKEFLAGS CFLAGS CXXFLAGS LDFLAGS raw_patch
+export CATEGORY PACKAGE VERSION BROOT S B D MAKEFLAGS CFLAGS CXXFLAGS LDFLAGS LINGUAS raw_patch
 
 /usr/lib/simple/unpack "$1" || return 1
 /usr/lib/simple/patch "$1" || return 1
