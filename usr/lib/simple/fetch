@@ -24,7 +24,7 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 				LINE=${BASH_REMATCH[3]}
 			done
 			SRC_URL="$NEW_LINE$LINE"
-		done < <(echo ${BASH_REMATCH[2]})
+		done < <(eval echo ${BASH_REMATCH[2]})
 	else
 		echo -e "\e[31mSRC_URL is no difended in $BUILDME_FILE\e[0m"
 		return 1
