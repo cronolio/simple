@@ -13,18 +13,24 @@ fi
 fetch_files(){
 
 for CPV in ${USERLIST_TO_INSTALL[@]}; do
-	get_variables $CPV
+	get_variables "$CPV"
 
-	BUILDME_FILE=$BUILDME_DIR/$CATEGORY/$PACKAGE/$PACKAGE-$VERSION$raw_patch.buildme
+	BUILDME_FILE="$BUILDME_DIR/$CATEGORY/$PACKAGE/$PACKAGE-$VERSION$raw_patch.buildme"
 
-	if [[ $(cat $BUILDME_FILE) =~ $regexSRC_URL ]]; then
+	if [[ $(cat "$BUILDME_FILE") =~ $regexSRC_URL ]]; then
 		while read -r LINE; do
-			while [[ $LINE =~ \$(\{([a-zA-Z_][a-zA-Z_0-9]*)\})(.*) ]]; do
-				NEW_LINE+="${LINE%"$BASH_REMATCH"}${!BASH_REMATCH[2]}"
-				LINE=${BASH_REMATCH[3]}
+			while [[ $LINE =~ \$(\{([a-zA-Z_][a-zA-Z_0-9]*)([^}]*?)\})(.*) ]]; do
+				if [[ -z "${BASH_REMATCH[3]}" ]]; then
+					NEW_LINE+="${LINE%$BASH_REMATCH}${!BASH_REMATCH[2]}"
+				else
+					v="${!BASH_REMATCH[2]}"
+					NEW_LINE+="${LINE%$BASH_REMATCH}$(eval echo '${'${!v@}${BASH_REMATCH[3]}'}')"
+					unset v
+				fi
+				LINE="${BASH_REMATCH[4]}"
 			done
 			SRC_URL="$NEW_LINE$LINE"
-		done < <(eval echo ${BASH_REMATCH[2]})
+		done <<<"${BASH_REMATCH[2]}"
 	else
 		echo -e "\e[31mSRC_URL is no difended in $BUILDME_FILE\e[0m"
 		return 1
@@ -32,7 +38,7 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 
 	unset LINE NEW_LINE
 
-	if [[ $(cat $BUILDME_FILE) =~ $regexMD5_SUM ]]; then
+	if [[ $(cat "$BUILDME_FILE") =~ $regexMD5_SUM ]]; then
 		MD5_SUM="${BASH_REMATCH[2]}"
 	else
 		echo -e "\e[31mMD5_SUM is no difended in $BUILDME_FILE\e[0m"
