@@ -23,9 +23,9 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 				if [[ -z "${BASH_REMATCH[3]}" ]]; then
 					NEW_LINE+="${LINE%$BASH_REMATCH}${!BASH_REMATCH[2]}"
 				else
-					v="${!BASH_REMATCH[2]}"
-					NEW_LINE+="${LINE%$BASH_REMATCH}$(eval echo '${'${!v@}${BASH_REMATCH[3]}'}')"
-					unset v
+					k="${!BASH_REMATCH[2]}"
+					NEW_LINE+="${LINE%$BASH_REMATCH}$(eval echo '${'${!k@}${BASH_REMATCH[3]}'}')"
+					unset k
 				fi
 				LINE="${BASH_REMATCH[4]}"
 			done
