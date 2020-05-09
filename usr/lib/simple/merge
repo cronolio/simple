@@ -79,7 +79,7 @@ for line in ** ; do
 		exist+=("$line")
 	fi
 
-	echo "otr /$line $(md5sum $line | cut -d ' ' -f1)"
+	echo otr /"$line" $(md5sum "$line" | cut -d ' ' -f1)
 
 done > "$BROOT"/CONTENT
 shopt -u globstar nullglob
