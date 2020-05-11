@@ -10,8 +10,8 @@
 ##### -- global -- ######
 regex1="([=<>]*)([-a-zA-Z]*)(/)([-_a-zA-Z0-9.]*)"
 regex2="([=<>]*)([-@_a-zA-Z0-9.]+)"
-regex3="([-_a-zA-Z0-9]+)(-)([0-9.]+[a-zA-Z0-9.]*)([_ptch]*)([0-9]*)"
-regex4="([-_a-zA-Z0-9]+)(-)([0-9.]+[a-zA-Z0-9.]*)([_ptch]*)([0-9]*)(.buildme)"
+regex3="([-_a-zA-Z0-9]+)(-)([0-9.]+[-a-zA-Z0-9.]*)([_ptch]*)([0-9]*)"
+regex4="([-_a-zA-Z0-9]+)(-)([0-9.]+[-a-zA-Z0-9.]*)([_ptch]*)([0-9]*)(.buildme)"
 regexBDEP='(BDEPEND=")([^"]*?)(")'
 regexSRC_URL='(SRC_URL=")([^"]*?)(")'
 regexMD5_SUM='(MD5_SUM=")([^"]*?)(")'
