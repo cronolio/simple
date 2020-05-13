@@ -7,33 +7,48 @@ cd $SIMPLEBUILD_DIR
 }
 
 remove_files(){
-# bug
-# doesn't support dir with spaces
+
 echo -n -e "\e[96mRemoving $CATEGORY/$PACKAGE-$VERSION$raw_patch  \e[0m"
 
 if [ -f /var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION$raw_patch"/CONTENT ]; then
-	content_regex=$'(dir|otr|elf_32|elf_64|sym) (.+) ([0-9a-f]+)(.*)'
-	content_regex_type=$'(dir|otr|elf_32|elf_64|sym) ([^ \f\n\r\t\v]+)'
+	content_file_regex=$'(otr|elf_32|elf_64) (/.+) ([0-9a-f]+)(.*)'
+	content_dir_regex=$'(dir) (/.+)'
+	content_sym_regex=$'(sym) (/.+) -> (.+)'
+	content_type_regex=$'(dir|otr|elf_32|elf_64|sym) .*'
 	while read -r line; do
-		#echo "line from content $line"
-		if [[ "$line" =~ $content_regex_type ]]; then
-			if [ "${BASH_REMATCH[1]}" = "dir" ]; then
-				package_dirs="${BASH_REMATCH[2]} $package_dirs"
-				continue
+		debug_message "line from content $line"
+		if [[ "$line" =~ $content_type_regex ]]; then
+			if [ "${BASH_REMATCH[1]}" = 'dir' ]; then
+				if [[ "$line" =~ $content_dir_regex ]]; then
+					debug_message "dir to remove ${BASH_REMATCH[2]}"
+					package_dirs="${BASH_REMATCH[2]} $package_dirs"
+					continue
+				else
+					echo "content dir regex failed"
+					return 1
+				fi
 			fi
-        	fi
-		if [[ "$line" =~ $content_regex ]]; then
-			if [ "${BASH_REMATCH[1]}" = "dir" ]; then
-				package_dirs="${BASH_REMATCH[2]} $package_dirs"
-			else
-				#echo "file to remove is ${BASH_REMATCH[2]}"
-				rm -f -- "${BASH_REMATCH[2]}"
+			if [ "${BASH_REMATCH[1]}" = 'sym' ]; then
+				if [[ "$line" =~ $content_sym_regex ]]; then
+					debug_message "sym to remove ${BASH_REMATCH[2]}"
+					rm -f -- "${BASH_REMATCH[2]}"
+					continue
+				else
+					echo "content sym regex failed"
+					return 1
+				fi
 			fi
+		fi
+		if [[ "$line" =~ $content_file_regex ]]; then
+			debug_message "file to remove is ${BASH_REMATCH[2]}"
+			rm -f -- "${BASH_REMATCH[2]}"
 		else
 			echo "content regex failed"
 			return 1
 		fi
 	done </var/lib/pkg/"$CATEGORY"/"$PACKAGE"-"$VERSION$raw_patch"/CONTENT
+
+	unset content_file_regex content_dir_regex content_sym_regex content_type_regex
 
 	fhs_dirs=$(grep '^[^#]' /usr/lib/simple/fhs_dirs)
 
