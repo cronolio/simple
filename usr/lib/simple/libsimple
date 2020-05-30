@@ -15,6 +15,8 @@ regex4="([-_a-zA-Z0-9]+)(-)([0-9.]+[-a-zA-Z0-9.]*)([_ptch]*)([0-9]*)(.buildme)"
 regexBDEP='(BDEPEND=")([^"]*?)(")'
 regexSRC_URL='(SRC_URL=")([^"]*?)(")'
 regexMD5_SUM='(MD5_SUM=")([^"]*?)(")'
+regexMD5='([0-9a-f]+)[ ]+(.+)'
+regex_url='([^ ]+)([ \t]*)([->]*)([ \t]*)(.*)'
 regexUSE='(USE=")([^"]*?)(")'
 check_use="([^ \f\n\r\t\v]+)(\?)"
 #for configure
@@ -368,18 +370,66 @@ fi
 }
 
 #######################################################
-# works on dowload phase
-if_renamed_source() {
-cheks=$(echo "$SRC_URL" | tr -s [:space:] ' ' | cut -d ' ' -f2)
-#echo $cheks
-if [[ "$cheks" == "->" ]]; then
-	echo true
-else
-	echo false
+# works on fetch phase
+if_renamed_source(){
+# reuired declared $url and $regex_url
+if [[ "$url" =~ $regex_url ]]; then
+	if [[ "${BASH_REMATCH[3]}" = '->' ]]; then
+		echo 'true'
+	else
+		echo 'false'
+	fi
 fi
-unset cheks
 }
+######################################################
+compare_md5_sum(){
+# required ${MD5_SUM[@]} parsed from buildme file
+# required $file (string with md5sum file_name)
+for sum in "${MD5_SUM[@]}"; do
+	if [[ "$sum" =~ $regexMD5 ]]; then
+		tmp_md5_sum="${BASH_REMATCH[1]}"
+		tmp_md5_file="${BASH_REMATCH[2]}"
 
+		if [[ "$file" != "$tmp_md5_file" ]]; then
+			unset tmp_md5_sum tmp_md5_file
+			continue
+		else
+			md5_sum="$tmp_md5_sum"
+			md5_file="$tmp_md5_file"
+			if [[ "$file_sum" = "$md5_sum" ]]; then
+				control_sum_correct='true'
+			fi
+		fi
+		unset md5_sum md5_file
+	fi
+	unset tmp_md5_sum tmp_md5_file
+done
+
+# must be checked that different file-name is declared in url and md5sum
+# or md5sum not declared at all
+}
+######################################################
+dowloaded_md5_sum(){
+# check md5sum for download file
+pushd "$DISTDIR" > /dev/null 2>&1 || return 1
+if [[ $(md5sum "$fan") =~ $regexMD5 ]] ; then
+	file_sum="${BASH_REMATCH[1]}"
+	file="${BASH_REMATCH[2]}"
+fi
+popd > /dev/null 2>&1 || return 1
+}
+######################################################
+try_fetch_source(){
+if [[ $(if_renamed_source) != true ]]; then
+	wget "$url" --continue --directory-prefix="$DISTDIR" || return 1
+else
+	if [[ "$url" =~ $regex_url ]]; then
+		url_renamed="${BASH_REMATCH[1]}"
+		file_name="${BASH_REMATCH[5]}"
+	fi
+	wget "$url_renamed" --continue --output-document="$DISTDIR/$file_name" || return 1
+fi
+}
 #######################################################
 is_use_needed(){
 
