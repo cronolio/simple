@@ -18,6 +18,11 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 	BUILDME_FILE="$BUILDME_DIR/$CATEGORY/$PACKAGE/$PACKAGE-$VERSION$raw_patch.buildme"
 
 	if [[ $(cat "$BUILDME_FILE") =~ $regexSRC_URL ]]; then
+		shopt -s extglob # enable extended pattern matching
+		v="${BASH_REMATCH[2]}"
+		v="${v#"${v%%[![:space:]]*}"}"
+		v="${v%"${v##*[![:space:]]}"}"
+		shopt -u extglob
 		while read -r LINE; do
 			while [[ $LINE =~ \$(\{([a-zA-Z_][a-zA-Z_0-9]*)([^}]*?)\})(.*) ]]; do
 				if [[ -z "${BASH_REMATCH[3]}" ]]; then
@@ -29,76 +34,95 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 				fi
 				LINE="${BASH_REMATCH[4]}"
 			done
-			SRC_URL="$NEW_LINE$LINE"
-		done <<<"${BASH_REMATCH[2]}"
+			SRC_URL+=("$NEW_LINE$LINE")
+			unset LINE NEW_LINE
+		done <<<"$v"
+		unset v
 	else
 		echo -e "\e[31mSRC_URL is no difended in $BUILDME_FILE\e[0m"
 		return 1
 	fi
 
-	unset LINE NEW_LINE
-
 	if [[ $(cat "$BUILDME_FILE") =~ $regexMD5_SUM ]]; then
-		MD5_SUM="${BASH_REMATCH[2]}"
+		shopt -s extglob
+		while read -r v; do
+			if [[ "$v" =~ ^\ *$ ]]; then
+				# remove empty or only with spaces lines
+				continue
+			else
+				v="${v#"${v%%[![:space:]]*}"}"
+				v="${v%"${v##*[![:space:]]}"}"
+				MD5_SUM+=("$v")
+        	fi
+		done <<<$"${BASH_REMATCH[2]}"
+		shopt -s extglob
+		unset v
 	else
 		echo -e "\e[31mMD5_SUM is no difended in $BUILDME_FILE\e[0m"
 		return 1
 	fi
 
-	if [[ $(if_renamed_source) != true ]]; then
-		FAN=$(echo "$SRC_URL" | sed -r 's#.*\/([-_a-z0-9.]*)#\1#')
-	else
-		FAN=$(echo "$SRC_URL" | tr -s [:space:] ' ' | cut -d ' ' -f3)
-	fi
 
-	if [ -f "$DISTDIR/$FAN" ]; then
-		echo -e "\e[96mFile $FAN available\e[0m"
-		FILE_SUM=$(md5sum "$DISTDIR/$FAN" | cut -d ' ' -f 1)
-		ORIG_SUM=$MD5_SUM
+	for url in "${SRC_URL[@]}"; do
+		if [[ $(if_renamed_source) != 'true' ]]; then
+			fan=$(echo "$url" | sed -r 's#.*\/([-_a-z0-9.]*)#\1#')
+		else
+			fan=$(echo "$url" | tr -s [:space:] ' ' | cut -d ' ' -f3)
+		fi
 
-		if [ "$ORIG_SUM" != "$FILE_SUM" ]; then
-			echo -e "\e[31mControl sum not corect. Trying to redownload $FAN\e[0m"
+		echo fan "$fan"
 
-			if [[ $(if_renamed_source) != true ]]; then
-				wget "$SRC_URL" --continue --directory-prefix="$DISTDIR" || return 1
+		if [ -f "$DISTDIR/$fan" ]; then
+			echo -e "\e[96mFile $fan available\e[0m"
+
+			dowloaded_md5_sum
+
+			compare_md5_sum
+
+			if [[ "$control_sum_correct" = 'true' ]]; then
+				# dowloaded and control sum correct
+				echo -e "\e[96mControl sum correct\e[0m"
 			else
-				FILE_NAME=$(echo "$SRC_URL" | tr -s [:space:] ' ' | cut -d ' ' -f3)
-				SRC_URL_RENAMED=$(echo "$SRC_URL" | tr -s [:space:] ' ' | cut -d ' ' -f1)
-				wget "$SRC_URL_RENAMED" --continue --output-document="$DISTDIR/$FILE_NAME" || return 1
-			fi
+				# rm and download, then check sum again
+				echo -e "\e[31mControl sum not corect. Trying refetch\e[0m"
+				rm -- "$DISTDIR/$fan"
 
-			FILE_SUM=$(md5sum "$DISTDIR/$FAN" | cut -d ' ' -f 1)
-			if [ "$ORIG_SUM" != "$FILE_SUM" ]; then
-				echo -e "\e[31mControl sum not corect\e[0m"
-				return 1
+				try_fetch_source || return 1
+
+				dowloaded_md5_sum
+
+				compare_md5_sum
+
+				if [[ "$control_sum_correct" = 'true' ]]; then
+					# dowloaded and control sum correct
+					echo -e "\e[96mControl sum correct\e[0m"
+				else
+					echo -e "\e[31mControl sum not corect\e[0m"
+					return 1
+        		fi
 			fi
 		else
-			echo -e "\e[96mControl sum correct\e[0m"
+			echo -e "\e[96mFile $fan is NOT available. Trying to download\e[0m"
+			try_fetch_source || return 1
+
+			dowloaded_md5_sum
+
+			compare_md5_sum
+
+			if [[ "$control_sum_correct" = 'true' ]]; then
+				# dowloaded and control sum correct
+				echo -e "\e[96mControl sum correct\e[0m"
+			else
+				echo -e "\e[31mControl sum not corect after fetch\e[0m"
+				break
+			fi
 		fi
-
-	else
-		echo -e "\e[96mFile $FAN is NOT available. Trying to download\e[0m"
-
-		if [[ $(if_renamed_source) != "true" ]]; then
-			wget "$SRC_URL" --continue --directory-prefix="$DISTDIR" || return 1
-		else
-			FILE_NAME=$(echo "$SRC_URL" | tr -s [:space:] ' ' | cut -d ' ' -f3)
-			SRC_URL_RENAMED=$(echo "$SRC_URL" | tr -s [:space:] ' ' | cut -d ' ' -f1)
-			wget "$SRC_URL_RENAMED" --continue --output-document="$DISTDIR/$FILE_NAME" || return 1
-		fi
-
-		FILE_SUM=$(md5sum "$DISTDIR/$FAN" | cut -d ' ' -f 1)
-		ORIG_SUM="$MD5_SUM"
-
-		if [ "$ORIG_SUM" != "$FILE_SUM" ]; then
-			echo -e "\e[31mControl sum not corect\e[0m"
-			return 1
-		fi
-	fi
+	unset file_sum file sum_correct control_sum_correct
+	done
 
 	#debug
-	debug_message "\e[96mFile have  $FILE_SUM\e[0m"
-	debug_message "\e[96mCorrect is $ORIG_SUM\e[0m"
+	#debug_message "\e[96mFile have  $FILE_SUM\e[0m"
+	#debug_message "\e[96mCorrect is $ORIG_SUM\e[0m"
 
 	# to run on fetch phase from buildme
 	user_fetch || { echo -e "\e[31m  * user_fetch failed\e[0m" && return 1; }
