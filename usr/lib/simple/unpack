@@ -24,7 +24,7 @@ mkdir -p "$S" || return 1
 mkdir -p "$D" || return 1
 mkdir -p "$B" || return 1
 
-for url in $SRC_URL; do
+for url in "$SRC_URL"; do
 	if [[ $(if_renamed_source) != true ]]; then
 		fan=$(echo "$url" | sed -r 's#.*\/([-_a-z0-9.]*)#\1#')
 	else
