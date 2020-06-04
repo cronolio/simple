@@ -39,18 +39,11 @@ for url in "$SRC_URL"; do
 		echo "$url is not archive. skeeping"
 	fi
 
-	#check if source in directory or not
-	if [ -d "$S/$PACKAGE-$VERSION" ]; then
-		S="$BROOT/srcdir/$PACKAGE-$VERSION"
-	else
-		S="$BROOT"/srcdir
-	fi
-
 	unset fan
 done
 
 #check if source in directory or not
-if [ -d "$S/$PACKAGE-$VERSION" ]; then
+if [ -d "$BROOT/srcdir/$PACKAGE-$VERSION" ]; then
 	S="$BROOT/srcdir/$PACKAGE-$VERSION"
 else
 	S="$BROOT"/srcdir
