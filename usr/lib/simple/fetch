@@ -63,19 +63,26 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 	fi
 
 
-	for url in "${SRC_URL[@]}"; do
-		if [[ $(if_renamed_source) != 'true' ]]; then
-			fan=$(echo "$url" | sed -r 's#.*\/([-_a-z0-9.]*)#\1#')
+	for url_line in "${SRC_URL[@]}"; do
+		if [[ "$control_sum_correct" = 'true' ]]; then
+			#echo renamed
+			fan="${url_line##* }"
+			url="${url_line%% *}"
 		else
-			fan=$(echo "$url" | tr -s [:space:] ' ' | cut -d ' ' -f3)
+			fan=$(echo "$url_line" | sed -r 's#.*\/([-_a-z0-9.]*)#\1#')
+			url="$url_line"
 		fi
 
-		echo fan "$fan"
+		#echo url "$url"
+		#echo fan "$fan"
 
 		if [ -f "$DISTDIR/$fan" ]; then
 			echo -e "\e[96mFile $fan available\e[0m"
 
 			dowloaded_md5_sum
+
+			#echo file "$file"
+			#echo file_sum "$file_sum"
 
 			compare_md5_sum
 
@@ -128,7 +135,7 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 	user_fetch || { echo -e "\e[31m  * user_fetch failed\e[0m" && return 1; }
 
 
-	unset FILE_SUM ORIG_SUM SRC_URL SRC_URL_RENAMED FILE_NAME
+	unset FILE_SUM ORIG_SUM SRC_URL SRC_URL_RENAMED FILE_NAME MD5_SUM
 	unset CATEGORY PACKAGE VERSION category package raw_package ver_modif ver_sep version
 
 done
