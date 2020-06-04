@@ -373,7 +373,7 @@ fi
 # works on fetch phase
 if_renamed_source(){
 # reuired declared $url and $regex_url
-if [[ "$url" =~ $regex_url ]]; then
+if [[ "$url_line" =~ $regex_url ]]; then
 	if [[ "${BASH_REMATCH[3]}" = '->' ]]; then
 		echo 'true'
 	else
@@ -386,11 +386,17 @@ compare_md5_sum(){
 # required ${MD5_SUM[@]} parsed from buildme file
 # required $file (string with md5sum file_name)
 for sum in "${MD5_SUM[@]}"; do
+	#echo sum $sum
 	if [[ "$sum" =~ $regexMD5 ]]; then
 		tmp_md5_sum="${BASH_REMATCH[1]}"
 		tmp_md5_file="${BASH_REMATCH[2]}"
 
+		#echo tmp_md5_sum \""$tmp_md5_sum"\"
+		#echo tmp_md5_file \""$tmp_md5_file"\"
+		#echo file \""$file"\"
+
 		if [[ "$file" != "$tmp_md5_file" ]]; then
+			#echo different file name
 			unset tmp_md5_sum tmp_md5_file
 			continue
 		else
@@ -400,9 +406,10 @@ for sum in "${MD5_SUM[@]}"; do
 				control_sum_correct='true'
 			fi
 		fi
+		#echo control_sum_correct libsimple $control_sum_correct
 		unset md5_sum md5_file
 	fi
-	unset tmp_md5_sum tmp_md5_file
+	unset tmp_md5_sum tmp_md5_file sum
 done
 
 # must be checked that different file-name is declared in url and md5sum
@@ -423,11 +430,7 @@ try_fetch_source(){
 if [[ $(if_renamed_source) != true ]]; then
 	wget "$url" --continue --directory-prefix="$DISTDIR" || return 1
 else
-	if [[ "$url" =~ $regex_url ]]; then
-		url_renamed="${BASH_REMATCH[1]}"
-		file_name="${BASH_REMATCH[5]}"
-	fi
-	wget "$url_renamed" --continue --output-document="$DISTDIR/$file_name" || return 1
+	wget "$url" --continue --output-document="$DISTDIR/$fan" || return 1
 fi
 }
 #######################################################
