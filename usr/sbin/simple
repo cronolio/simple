@@ -144,7 +144,7 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 
 	unset broot path_regex category
 
-	BASH_ENV="$SIMPLEBUILD_DIR/bashrc" su simple -s /bin/bash /usr/lib/simple/all_build -- $CPV -all_build
+	BASH_ENV="$SIMPLEBUILD_DIR/bashrc" su simple -s /bin/bash /usr/lib/simple/all_build -- $CPV -all_build || { echo -e "\e[31m  * run_build failed\e[0m" && return 1; }
 
 	/usr/lib/simple/install $CPV || { echo -e "\e[31m  * install failed\e[0m" && return 1; }
 	/usr/lib/simple/merge $CPV || { echo -e "\e[31m  * merge failed\e[0m" && return 1; }
