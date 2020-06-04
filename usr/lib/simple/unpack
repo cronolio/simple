@@ -24,12 +24,21 @@ mkdir -p "$S" || return 1
 mkdir -p "$D" || return 1
 mkdir -p "$B" || return 1
 
-for url in "$SRC_URL"; do
-	if [[ $(if_renamed_source) != true ]]; then
-		fan=$(echo "$url" | sed -r 's#.*\/([-_a-z0-9.]*)#\1#')
-	else
-		fan=$(echo "$url" | tr -s [:space:] ' ' | cut -d ' ' -f3)
+while read -r url_line; do
+	if [[ "$url_line" =~ ^\ *$ ]]; then
+		continue
 	fi
+	#echo url_line "$url_line"
+	if [[ $(if_renamed_source) = 'true' ]]; then
+		fan="${url_line##* }"
+		url="${url_line%% *}"
+	else
+		fan=$(echo "$url_line" | sed -r 's#.*\/([-_a-z0-9.]*)#\1#')
+		url="$url_line"
+	fi
+
+	#echo unpack url "$url"
+	#echo unpack fan "$fan"
 
 	if [[ $(if_archive) = 'true' ]]; then
 		echo -en "\e[96mUnpacking source for $fan ...  \e[0m"
@@ -40,7 +49,7 @@ for url in "$SRC_URL"; do
 	fi
 
 	unset fan
-done
+done <<<"$SRC_URL"
 
 #check if source in directory or not
 if [ -d "$BROOT/srcdir/$PACKAGE-$VERSION" ]; then
