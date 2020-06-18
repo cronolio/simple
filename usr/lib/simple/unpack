@@ -71,3 +71,4 @@ print_variable >> "$BROOT/varlog/variables"
 unpack_archives $1 || exit 1
 user_unpack || exit 1
 add_environment || exit 1
+
