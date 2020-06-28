@@ -64,7 +64,7 @@ for CPV in ${USERLIST_TO_INSTALL[@]}; do
 
 
 	for url_line in "${SRC_URL[@]}"; do
-		if [[ "$control_sum_correct" = 'true' ]]; then
+		if [[ $(if_renamed_source) = 'true' ]]; then
 			#echo renamed
 			fan="${url_line##* }"
 			url="${url_line%% *}"
