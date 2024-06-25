@@ -144,7 +144,7 @@ int get_expression() {
   return 0;
 }
 
-int get_variables(const char *func, char *look) {
+int get_variables(const char *func, char *look){
   printf("function is: %s, look is: %s\n", func, look);
 
   regex_t regex1;
@@ -438,7 +438,7 @@ int search_in_categories(char *look){
 
         if (test_file("d", testline) == 0) {
           // line 125
-          printf("testline %s\n", testline);
+          // printf("testline %s\n", testline);
           size_t flength = strlen(testline);
 
           if (found) {
@@ -476,7 +476,7 @@ int search_in_categories(char *look){
       printf("found is \"%s\"\n", found);
 
       //line 143
-      //get_variables(found)
+      get_variables(__func__,found);
 
       if (debug == 1) {
         printf("category: %s\n", category);
@@ -492,5 +492,24 @@ int search_in_categories(char *look){
 
 
 int get_dep(){
+
+  char buildme_path[PATH_MAX+1];
+
+  sprintf(buildme_path, "%s/%s/%s/%s-%s%s.buildme", buildme_dir, category, package, package, version, raw_patch);
+
+  printf("buildme_path is %s\n", buildme_path);
+
+  // parse buildme file
+  char *key, *value;
+  FILE *ptr = fopen(buildme_path, "r");
+
+  if (ptr == NULL) {
+    printf("no such file.\n");
+    return 1;
+  }
+
+  
+
+  
   return 0;
 }
