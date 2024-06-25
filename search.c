@@ -136,6 +136,8 @@ int main(int argc, char **argv){
     printf("argv: %s\n", argv[a]);
 
     search_in_categories(argv[a]);
+
+    get_dep();
   }
 
   return 0;
