@@ -381,7 +381,6 @@ int search_in_categories(char *look){
       if (chdir(old_path) != 0) {
         perror("chdir() error");
       }
-
       //line 80
 
 
@@ -459,7 +458,8 @@ int search_in_categories(char *look){
         perror("chdir() error");
         exit(1);
       }
-
+      //TODO: clean old_path here
+      
       //trim trailing whitespace here
       //line 130
         
@@ -482,9 +482,72 @@ int search_in_categories(char *look){
         printf("category: %s\n", category);
         printf("package: %s\n", package);
       }
+
+
+      char buffer[PATH_MAX+1];
+      sprintf(buffer, "%s/%s/%s", buildme_dir, category, package);
+      if (test_file("d", buffer) == 1) {
+        return 1;
+      }
+
+      // save current directory
+      if (getcwd(old_path, sizeof(old_path)) == NULL) {
+        perror("cant save current directory. getcwd() error");
+        return 1;
+      }
+
+      // change directory for search
+      if (chdir(buffer) != 0) {
+        perror("chdir() error");
+        exit(1);
+
+      //
+      } else {
+        glob_t gstruct;
+        int r;
+
+        r = glob("*.buildme", GLOB_ERR, NULL, &gstruct);
+        if (r != 0) {
+          if (r == GLOB_NOMATCH) {
+            printf("glob no match'n");
+          } else {
+            printf("glob error\n");
+            exit(r);
+          }
+        }
+
+        for (size_t i = 0; i < gstruct.gl_pathc; i++) {
+          if(test_file("f", gstruct.gl_pathv[i]) == 0) {
+            //printf("%s\n", gstruct.gl_pathv[i]);
+            size_t flength = strlen(gstruct.gl_pathv[i]);
+            char *filename = malloc(flength * sizeof(char));
+            strcpy(filename, gstruct.gl_pathv[i]);
+
+            if (filenames) {
+              char *oldfilenames = strdup(filenames);
+              free(filenames);
+              sprintf(filenames, "%s %s ", oldfilenames, filename);
+            } else {
+              filenames = malloc(flength * sizeof(char));
+              sprintf(filenames, "%s", filename);
+            }
+          }
+        }
+        void globfree(glob_t *gstruct);
+      }
+
+      
+
+
+      if (chdir(old_path) != 0) {
+        perror("chdir() error");
+        exit(1);
+      }
     }
 
-    //debug_message "list after search: ";
+    if (debug == 1) {
+      printf("list after search: %s\n", filenames);
+    }
   }
 
   return 0;
