@@ -34,6 +34,7 @@ extern char *patch;
 
 extern char *filenames;
 extern char *found;
+extern char *sortedbyversion;
 
 extern char *expr;
 extern char *more_version;
@@ -547,6 +548,40 @@ int search_in_categories(char *look){
 
     if (debug == 1) {
       printf("list after search: %s\n", filenames);
+    }
+  }
+
+  // check version
+  // line 170
+
+  if (ver_modif != NULL) {
+    printf("not implemented\n");
+    exit(1);
+  } else {
+    sortedbyversion = strdup(filenames);
+  }
+
+  if (debug == 1) {
+    printf("sorted by version: %s\n", sortedbyversion);
+  }
+
+  // check stability
+  // line 203
+
+  if (userlist_to_remove == 1 ) {
+    // TODO: implement.
+    // line 206
+    printf("not implemented\n");
+    exit(1);
+  } else {
+    char* f;
+    char* rest = sortedbyversion;
+    while ((f = strtok_r(rest, " ", &rest))) {
+      if (debug == 1) {
+        printf("f: %s\n", f);
+      }
+      
+
     }
   }
 
