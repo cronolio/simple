@@ -75,6 +75,9 @@ return 1;
 
 
 int get_expression() {
+  if (debug == 1) {
+    printf("function is: get expression\n");
+  }
 
   expr = malloc(sizeof(char) * 2);
   exprml = malloc(sizeof(char) * 2);
@@ -145,8 +148,12 @@ int get_expression() {
   return 0;
 }
 
-int get_variables(const char *func, char *look){
-  printf("function is: %s, look is: %s\n", func, look);
+int get_variables(const char *func, char *look) {
+  if (debug == 1) {
+    printf("function is: get_variables\n");
+    printf("called from: %s, look is: %s\n", func, look);
+  }
+  
 
   regex_t regex1;
   regex_t regex2;
@@ -476,10 +483,12 @@ int search_in_categories(char *look){
 
       printf("found is \"%s\"\n", found);
 
+
       //line 143
       get_variables(__func__,found);
 
       if (debug == 1) {
+        printf("ver_modif: %s\n", ver_modif);
         printf("category: %s\n", category);
         printf("package: %s\n", package);
       }
