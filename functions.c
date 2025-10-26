@@ -45,6 +45,7 @@ extern char *exprml;
 char *myregex1 = "([=<>]*)([-a-zA-Z]*)(/)([-_a-zA-Z0-9.]*)";
 char *myregex2 = "([=<>]*)([-@_a-zA-Z0-9.]+)";
 char *myregex3 = "([-_a-zA-Z0-9]+)(-)([0-9.]+[-a-zA-Z0-9.]*)([_ptch]*)([0-9]*)";
+char *myregex4 = "([-_a-zA-Z0-9]+)(-)([0-9.]+[-a-zA-Z0-9.]*)([_ptch]*)([0-9]*)(.buildme)";
 char *regexBDEP = "(BDEPEND=\")([^\"]*?)(\")";
 
 // function to test a file type
@@ -593,6 +594,14 @@ int search_in_categories(char *look){
 
     }
   }
+
+  // reset global variables
+  ver_modif = NULL;
+  category = NULL;
+  package = NULL;
+  raw_package = NULL;
+  found = NULL;
+  filenames = NULL;
 
   return 0;
 }
