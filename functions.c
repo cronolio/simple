@@ -80,10 +80,10 @@ int get_expression() {
     printf("function is: get expression\n");
   }
 
-  expr = malloc(sizeof(char) * 2);
-  exprml = malloc(sizeof(char) * 2);
-  expr[sizeof(char) - 1] = '\0';
-  exprml[sizeof(char) - 1] = '\0';
+  expr = malloc(sizeof(char) * 2 + 1);
+  exprml = malloc(sizeof(char) * 2 + 1);
+  expr[sizeof(char) * 2] = '\0';
+  exprml[sizeof(char) * 2] = '\0';
   
   // https://stackoverflow.com/a/26609503
   if (ver_modif || version) {    
@@ -154,7 +154,6 @@ int get_variables(const char *func, char *look) {
     printf("function is: get_variables\n");
     printf("called from: %s, look is: %s\n", func, look);
   }
-  
 
   regex_t regex1;
   regex_t regex2;
@@ -284,6 +283,7 @@ int get_variables(const char *func, char *look) {
     printf("version: %s\n", version);
     printf("raw_patch: %s\n", raw_patch);
     printf("patch: %s\n", patch);
+    printf("end of get_variables()\n");
   }
   
   return 0;
@@ -292,7 +292,7 @@ int get_variables(const char *func, char *look) {
 int search_in_categories(char *look){
   //printf("argv from search_in_categories: %s\n", look);
 
-  get_variables(__func__, look);  
+  get_variables(__func__, look);
   get_expression();
 
   if (category != NULL) {
@@ -531,7 +531,7 @@ int search_in_categories(char *look){
           if(test_file("f", gstruct.gl_pathv[i]) == 0) {
             //printf("%s\n", gstruct.gl_pathv[i]);
             size_t flength = strlen(gstruct.gl_pathv[i]);
-            char *filename = malloc(flength * sizeof(char));
+            char *filename = malloc(flength * sizeof(char) + 1);
             strcpy(filename, gstruct.gl_pathv[i]);
 
             if (filenames) {
@@ -539,7 +539,7 @@ int search_in_categories(char *look){
               free(filenames);
               sprintf(filenames, "%s %s ", oldfilenames, filename);
             } else {
-              filenames = malloc(flength * sizeof(char));
+              filenames = malloc(flength * sizeof(char) + 1);
               sprintf(filenames, "%s", filename);
             }
           }
@@ -596,10 +596,13 @@ int search_in_categories(char *look){
   }
 
   // reset global variables
+
+  sortedbyversion = NULL;
   ver_modif = NULL;
   category = NULL;
   package = NULL;
   raw_package = NULL;
+  version = NULL;
   found = NULL;
   filenames = NULL;
 
