@@ -23,15 +23,21 @@ extern char *buildme_dir;
 extern char *simplebuild_dir;
 extern char *stability;
 
-//package related variables
+// package related variables
 extern char *ver_modif;
 extern char *category;
-extern char *raw_package;
 extern char *package;
+extern char *raw_package;
 extern char *version;
 extern char *raw_patch;
 extern char *patch;
 
+// calculated variables
+extern char *CATEGORY;
+extern char *PACKAGE;
+extern char *VERSION;
+
+// temp vars
 extern char *filenames;
 extern char *found;
 extern char *sortedbyversion;
@@ -595,6 +601,10 @@ int search_in_categories(char *look){
     }
   }
 
+  CATEGORY = strdup(category);
+  PACKAGE = strdup(package);
+  //VERSION = strdup(version); // TODO: maxver
+
   // reset global variables
 
   sortedbyversion = NULL;
@@ -614,7 +624,7 @@ int get_dep(){
 
   char buildme_path[PATH_MAX+1];
 
-  sprintf(buildme_path, "%s/%s/%s/%s-%s%s.buildme", buildme_dir, category, package, package, version, raw_patch);
+  sprintf(buildme_path, "%s/%s/%s/%s-%s%s.buildme", buildme_dir, CATEGORY, PACKAGE, PACKAGE, VERSION, raw_patch);
 
   printf("buildme_path is %s\n", buildme_path);
 
