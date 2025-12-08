@@ -32,6 +32,11 @@ char *version = NULL;
 char *raw_patch = NULL;
 char *patch = NULL;
 
+
+char *CATEGORY = NULL;
+char *PACKAGE = NULL;
+char *VERSION = NULL;
+
 // expression related
 char *expr = NULL;
 char *more_version = NULL;
