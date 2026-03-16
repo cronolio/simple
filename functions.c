@@ -41,6 +41,7 @@ extern char *VERSION;
 extern char *filenames;
 extern char *found;
 extern char *sortedbyversion;
+extern char *maxver;
 
 extern char *expr;
 extern char *more_version;
@@ -590,24 +591,56 @@ int search_in_categories(char *look){
     printf("not implemented\n");
     exit(1);
   } else {
-    char* f;
+    char* v;
     char* rest = sortedbyversion;
-    while ((f = strtok_r(rest, " ", &rest))) {
+    while ((v = strtok_r(rest, " ", &rest))) {
       if (debug == 1) {
-        printf("f: %s\n", f);
+        printf("v: %s\n", v);
+      }
+
+      regex_t regex4;
+
+      if (regcomp(&regex4, myregex4, REG_EXTENDED) != 0) {
+        printf("myregex4 error\n");
+        exit(1);
+      }
+
+      regmatch_t matches4[regex4.re_nsub + 1];
+      if (regexec(&regex4, v, regex4.re_nsub + 1, matches4, 0) == 0){
+        size_t i;
+        for(i = 0; i <= regex4.re_nsub; i++) {
+          //printf("i is %lu\n", i);
+          if(matches4[i].rm_so == -1) {
+            break;
+          }else{
+            int length = matches4[i].rm_eo - matches4[i].rm_so;
+            if (i == 3) {
+              maxver = malloc(length * sizeof(char) + 1);
+              strncpy(maxver, v + matches4[i].rm_so, length);
+              maxver[length] = '\0';
+            }
+          }
+        }
+      } else {
+        printf("myregex4 did not find anything\n");
+        exit(1);
+      }
+
+      if (debug == 1) {
+        printf("maxver: %s\n", maxver);
       }
       
-
     }
   }
 
   CATEGORY = strdup(category);
   PACKAGE = strdup(package);
-  //VERSION = strdup(version); // TODO: maxver
+  VERSION = strdup(maxver); // TODO: maxver
 
   // reset global variables
 
   sortedbyversion = NULL;
+  maxver = NULL;
   ver_modif = NULL;
   category = NULL;
   package = NULL;
@@ -636,8 +669,6 @@ int get_dep(){
     printf("no such file.\n");
     return 1;
   }
-
-  
 
   
   return 0;
