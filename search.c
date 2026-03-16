@@ -48,6 +48,7 @@ char *exprml = NULL;
 char *filenames = NULL;
 char *found = NULL;
 char *sortedbyversion = NULL;
+char *maxver = NULL;
 
 // https://riptutorial.com/c/example/3250/calling-a-function-from-another-c-file
 
