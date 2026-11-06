@@ -31,6 +31,7 @@ char *package = NULL;
 char *version = NULL;
 char *raw_patch = NULL;
 char *patch = NULL;
+char *bdep_line = NULL;
 
 
 char *CATEGORY = NULL;
