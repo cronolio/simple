@@ -31,6 +31,7 @@ extern char *raw_package;
 extern char *version;
 extern char *raw_patch;
 extern char *patch;
+extern char *bdep_line;
 
 // calculated variables
 extern char *CATEGORY;
@@ -657,19 +658,50 @@ int get_dep(){
 
   char buildme_path[PATH_MAX+1];
 
-  sprintf(buildme_path, "%s/%s/%s/%s-%s%s.buildme", buildme_dir, CATEGORY, PACKAGE, PACKAGE, VERSION, raw_patch);
 
+  //sprintf(buildme_path, "%s/%s/%s/%s-%s%s.buildme", buildme_dir, CATEGORY, PACKAGE, PACKAGE, VERSION, raw_patch);
+  // TODO: raw_patch support
+  sprintf(buildme_path, "%s/%s/%s/%s-%s.buildme", buildme_dir, CATEGORY, PACKAGE, PACKAGE, VERSION);
   printf("buildme_path is %s\n", buildme_path);
 
   // parse buildme file
-  char *key, *value;
-  FILE *ptr = fopen(buildme_path, "r");
+  FILE *bf = fopen(buildme_path, "r");
 
-  if (ptr == NULL) {
+  if (bf == NULL) {
     printf("no such file.\n");
     return 1;
   }
 
+  regex_t regex4;
+
+  if (regcomp(&regex4, regexBDEP, REG_EXTENDED) != 0) {
+      printf("regexBDEP error\n");
+      exit(1);
+  }
+
+  char temp_line[256];
+  char buffer[1024]; // max chars to keep in buffer
+
+  regmatch_t matches4[regex4.re_nsub + 1];
   
+  while (fgets(temp_line, sizeof(temp_line), bf) != NULL) {
+    if (strlen(buffer) + strlen(temp_line) < sizeof(buffer) - 1) {
+      strcat(buffer, temp_line);
+    }
+    //printf("buffer is: %s", buffer);
+    if (regexec(&regex4, buffer, regex4.re_nsub + 1, matches4, 0) == 0) {
+      int length = matches4[2].rm_eo - matches4[2].rm_so - 1;
+      bdep_line = malloc(length * sizeof(char) + 1);
+      strncpy(bdep_line, buffer + matches4[2].rm_so, length);
+      bdep_line[length] = '\0';
+      break;
+    }
+  }
+
+  printf("bdep_line is %s\n", bdep_line);
+
+  regfree(&regex4);
+  fclose(bf);
+  printf("igogo\n");
   return 0;
 }
